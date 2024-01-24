@@ -1,123 +1,83 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./CLETH.sol";
-
+import "./CLMatic.sol";
+import "./StakeHolder.sol";
+// import "./IFigmentEth2Depositor.sol";
 contract StakingMaster {
-    CLETH private clethToken;
-    mapping(address => uint256) private stakedBalance;
-    mapping(address => uint256) public lastStakeTime;
-    mapping(address => UserAction[]) public userHistory;
+    CLMatic  private clMatic;
     uint256 public totalPool;
-    uint256 public lockDuration = 1 days;
-    address public Owner;
+    uint256 public lockDuration = 1;
+    address public owner;
+    mapping(address => StakeHolder)  public stakeHolders;
+    mapping(address => uint256) public stakedBalance;
+    mapping(address => uint256) public lastStakeTime;
+    mapping(address => UserStatus) public userStatus;
 
+    enum UserStatus { Unknown, Whitelisted, Blacklisted }
     enum ActionType { Staked, Restaked, Withdrawn, Unstaked }
     struct UserAction {
         ActionType actionType;
         uint256 amount;
         uint256 timestamp;
     }
+    event Unstaked(address indexed user, uint256 amount);
 
+    event Staked(address indexed user, StakeHolder stakeHolderContract, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event RewardsRestaked(address indexed user, uint256 amount);
+    event DepositReceived(address indexed depositor, uint256 amount);
+    event WithdrawalMade(address indexed receiver, uint256 amount);
+    constructor(CLMatic _clMatic) {
+        clMatic = _clMatic;
+        owner = msg.sender;
+    }
     modifier onlyOwner() {
-    require(msg.sender == Owner, "Only the contract deployer can execute this");
-    _;
-}
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
 
-   constructor(CLETH _clethToken) {
-    clethToken = _clethToken;
-   // Owner = msg.sender;
-}
-
-
-    function stake() public payable {
+    function stake() public payable   {
+    require(msg.value > 0, "Must send ETH to stake");
+ // TODO : add validation for 32 eth check 
+    StakeHolder stakeHolder = stakeHolders[msg.sender];
+    if (address(stakeHolder) == address(0)) {
+        // Pass the correct number of arguments to the StakeHolder constructor
+        stakeHolder = new StakeHolder{value: msg.value}(msg.sender, address(this),clMatic);
+        stakeHolders[msg.sender] = stakeHolder;
+    } else {
+        (bool success, ) = address(stakeHolder).call{value: msg.value}("");
+        require(success, "Failed to send ETH to StakeHolder");
+    }
+        clMatic.mint(msg.sender, msg.value);
         stakedBalance[msg.sender] += msg.value;
-        clethToken.mint(msg.sender, msg.value);
         lastStakeTime[msg.sender] = block.timestamp;
         totalPool += msg.value;
-        userHistory[msg.sender].push(UserAction(ActionType.Staked, msg.value, block.timestamp));
+        emit Staked(msg.sender, stakeHolder, msg.value);
     }
+function unstake(uint256 amount) public  {
+    require(amount !=0,"Amount can not be zero");
+    require(stakedBalance[msg.sender] >= amount, "Not enough staked ETH");
+    require(clMatic.balanceOf(msg.sender) >= amount, "Not enough CLETH");
+    clMatic.transferFrom(msg.sender, address(stakeHolders[msg.sender]), amount);
+    stakedBalance[msg.sender] -= amount;
+    totalPool -= amount;
+   emit Unstaked(msg.sender, amount);
+}
+function depositETH() external payable {
+    require(msg.value > 0, "Deposit amount must be greater than 0");
+    emit DepositReceived(msg.sender, msg.value);
+}
 
-
-    function restakeRewards() public {
-        uint256 reward = clethToken.rewards(msg.sender);
-        require(reward > 0, "No rewards to re-stake");
-        require(block.timestamp >= lastStakeTime[msg.sender] + lockDuration, "Tokens are still locked");
-        
-        clethToken.setReward(msg.sender, 0); 
-        
-        
-        stakedBalance[msg.sender] += reward;
-        lastStakeTime[msg.sender] = block.timestamp;
-        totalPool += reward;
-        userHistory[msg.sender].push(UserAction(ActionType.Restaked, reward, block.timestamp));
-        emit RewardsRestaked(msg.sender, reward);
-    }
-
-    function withdraw(uint256 amount) public {
-        require(block.timestamp >= lastStakeTime[msg.sender] + lockDuration, "Tokens are still locked");
-        require(amount > 0, "Cannot withdraw 0");
-        require(stakedBalance[msg.sender] >= amount, "Not enough staked ETH");
-        stakedBalance[msg.sender] -= amount;
-        payable(msg.sender).transfer(amount);
-        totalPool -= amount;
-        userHistory[msg.sender].push(UserAction(ActionType.Withdrawn, amount, block.timestamp));
-        emit Withdrawn(msg.sender, amount);
-    }
-
-    function unstake(uint256 amount) public onlyWhitelisted notBlacklisted{
-        require(block.timestamp >= lastStakeTime[msg.sender] + lockDuration, "Tokens are still locked");
-        require(stakedBalance[msg.sender] >= amount, "Not enough staked ETH");
-        require(clethToken.balanceOf(msg.sender) >= amount, "Not enough CLETH tokens");
-        stakedBalance[msg.sender] -= amount;
-        clethToken.burn(msg.sender, amount);
-        payable(msg.sender).transfer(amount);
-        totalPool -= amount;
-        userHistory[msg.sender].push(UserAction(ActionType.Unstaked, amount, block.timestamp));
-    }
-
-    function distributeRewards(address[] memory recipients, uint256[] memory amounts) public {
-        require(recipients.length == amounts.length, "Mismatched arrays");
-        for (uint256 i = 0; i < recipients.length; i++) {
-            clethToken.addReward(recipients[i], amounts[i]);
-        }
-    }
-
-    function claimRewards() public {
-        clethToken.claimReward(msg.sender);
-    }
-
-    // function slashAccount(address account, uint256 amount) public {
-    //     clethToken.burn(account, amount);
-    // }
-
-    function pauseCLETH() public {
-        clethToken.pause();
-    }
-
-    function unpauseCLETH() public {
-        clethToken.unpause();
-    }
-
-    function getStakedBalance(address account) public view returns (uint256) {
-        return stakedBalance[account];
-    }
-
-    function getUserHistory(address user) public view returns (UserAction[] memory) {
-        return userHistory[user];
-    }
-
-    function updateLockDuration(uint256 newDuration) public {
-        require(newDuration > 0, "Lock duration must be positive");
-        lockDuration = newDuration;
-    }
-    
-
-enum UserStatus { Unknown, Whitelisted, Blacklisted }
-mapping(address => UserStatus) public userStatus;
-
+function withdrawETH(uint256 amount) public {
+    require(amount > 0 && amount <= address(this).balance, "Invalid withdrawal amount");
+    (bool success, ) = msg.sender.call{value: amount}("");
+    require(success, "Transfer failed");
+    emit WithdrawalMade(msg.sender, amount);
+}
+function isOwner(address _caller) public view returns (bool) {
+    return _caller == owner;
+}
 modifier onlyWhitelisted() {
     require(userStatus[msg.sender] == UserStatus.Whitelisted, "User is not whitelisted");
     _;
@@ -127,13 +87,12 @@ modifier notBlacklisted() {
     require(userStatus[msg.sender] != UserStatus.Blacklisted, "User is blacklisted");
     _;
 }
-
-function addToWhitelist(address user) public onlyOwner {
+function addToWhitelist(address user) public onlyOwner(){
     
     userStatus[user] = UserStatus.Whitelisted;
 }
 
-function addToBlacklist(address user) public onlyOwner{
+function addToBlacklist(address user) public onlyOwner {
    
     userStatus[user] = UserStatus.Blacklisted;
 }
@@ -143,7 +102,7 @@ function removeFromWhitelist(address user) public onlyOwner{
     userStatus[user] = UserStatus.Unknown;
 }
 
-function removeFromBlacklist(address user) public  onlyOwner{
+function removeFromBlacklist(address user) public onlyOwner {
     
     userStatus[user] = UserStatus.Unknown;
 }
@@ -152,5 +111,7 @@ function checkUserStatus(address user) public view returns (UserStatus) {
     return userStatus[user];
 }
 
-           
+
+
+
 }
