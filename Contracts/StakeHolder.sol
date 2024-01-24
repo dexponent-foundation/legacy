@@ -35,12 +35,13 @@ contract StakeHolder {
         emit DepositReceived(msg.sender, msg.value);
     }
 
-    function withdrawETH(uint256 amount) public {
+    function withdrawETH(uint256 amount,address user) public {
         require(
             amount > 0 && amount <= address(this).balance,
             "Invalid withdrawal amount"
         );
-        (bool success, ) = msg.sender.call{value: amount}("");
+          address payable to = payable(user);
+        (bool success, ) = to.call{value: amount}("");
         require(success, "Transfer failed");
     }
 
@@ -56,4 +57,8 @@ contract StakeHolder {
     function getClethBalance() external view returns (uint256) {
         return clMatic.balanceOf(address(this));
     }
+    function getEthbalance()public returns (uint256){
+        return address(this).balance;
+    }
+    
 }

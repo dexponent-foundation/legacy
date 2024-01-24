@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "./CLMatic.sol";
 import "./StakeHolder.sol";
+import "hardhat/console.sol";
 // import "./IFigmentEth2Depositor.sol";
 contract StakingMaster {
     CLMatic  private clMatic;
@@ -53,16 +54,20 @@ contract StakingMaster {
         stakedBalance[msg.sender] += msg.value;
         lastStakeTime[msg.sender] = block.timestamp;
         totalPool += msg.value;
+        console.log("balalnce",address(stakeHolder).balance);
+
         emit Staked(msg.sender, stakeHolder, msg.value);
     }
-function unstake(uint256 amount) public  {
+function unstake(uint256 amount) public  payable{
     require(amount !=0,"Amount can not be zero");
     require(stakedBalance[msg.sender] >= amount, "Not enough staked ETH");
     require(clMatic.balanceOf(msg.sender) >= amount, "Not enough CLETH");
-    clMatic.transferFrom(msg.sender, address(stakeHolders[msg.sender]), amount);
+    clMatic.burn(msg.sender,amount);
     stakedBalance[msg.sender] -= amount;
     totalPool -= amount;
-   emit Unstaked(msg.sender, amount);
+   StakeHolder user =  stakeHolders[msg.sender];
+   user.withdrawETH(amount,msg.sender);
+    emit Unstaked(msg.sender, amount);
 }
 function depositETH() external payable {
     require(msg.value > 0, "Deposit amount must be greater than 0");
