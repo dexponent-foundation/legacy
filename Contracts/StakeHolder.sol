@@ -1,24 +1,21 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 import "./StakingMaster.sol";
-import {IValidatorShare} from "./interfaces/IValidatorShare.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract StakeHolder {
     address public staker;
     address public masterContract;
-    IERC20 public clArb;
     IERC20 public  abrToken;
     bool private approved = false;
     event DepositReceived(address indexed from, uint256 amount);
     event FundsSent(address indexed to, uint256 amount);
-    event clArbReceived(address indexed from, uint256 amount);
 
-    constructor(address _staker, address _masterContract, IERC20 _clArb,IERC20 _arb) {
+
+    constructor(address _staker, address _masterContract,IERC20 _arb) {
         staker = _staker;
         masterContract = _masterContract;
-        clArb = _clArb;
         abrToken = _arb;
     }
 

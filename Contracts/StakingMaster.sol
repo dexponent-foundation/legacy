@@ -1,16 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 import "./token/Clarb.sol";
 import "./StakeHolder.sol";
 import "hardhat/console.sol";
 
-// use deposit to staking master
-// call the buyVoucher funcation validator
-// deposit 1 Matic as of now
-// and mint clARB for user
-// also withdraw funds call sellVoucher_new on contract
-// 0xA5950BaD8944A60830554d63dAF10895c5ea4E76 staking master 
-// 0x4a8F476b2c4d8b31F73710bB599fB56791c2Cc4b cleth
 // arb token 0x36f9cD0914314BDFF5cCC9604780d0B07E719b5B
 contract StakingMaster {
     ClARB private clARB;
@@ -48,7 +41,7 @@ contract StakingMaster {
     function stake(uint256 amount) public {
         StakeHolder stakeHolder = stakeHolders[msg.sender];
         if (address(stakeHolder) == address(0)) {
-            stakeHolder = new StakeHolder(msg.sender, address(this), clARB,ARB);
+            stakeHolder = new StakeHolder(msg.sender, address(this),ARB);
             stakeHolders[msg.sender] = stakeHolder;
         }
         IERC20 token = IERC20(ARB);
@@ -72,9 +65,7 @@ contract StakingMaster {
         user.withdrawArb(amount,msg.sender);
         emit Unstaked(msg.sender, amount);
     }
-// 0x36f9cD0914314BDFF5cCC9604780d0B07E719b5B arb token 
-//  clarb 0x4a8F476b2c4d8b31F73710bB599fB56791c2Cc4b
-//  staking master 0xa1108008EC3EaAE70ce7A9B476769870a1ba95c6
+
 
 
 }
