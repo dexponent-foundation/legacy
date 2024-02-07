@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 import "../token/ClEth.sol";
 import "./StakeHolder.sol";
 import "hardhat/console.sol";
@@ -14,6 +14,8 @@ contract StakingMaster {
     mapping(address => uint256) public StakedBalance;
     mapping(address => uint256) public WithdrawalBalance;
     event Unstaked(address indexed user, uint256 amount);
+
+    event UnstakedArb(address indexed user, uint256 amount);
     event Staked(
         address indexed user,
         StakeHolder stakeHolderContract,
@@ -69,6 +71,7 @@ contract StakingMaster {
             stakeHolder = new StakeHolder{value: msg.value}(
                 msg.sender,
                 address(this),
+                owner,
                 figmentDepositor,
                 clETH
             );
@@ -82,14 +85,16 @@ contract StakingMaster {
         return stakeHolder;
     }
 
-    function unstakeWCleth(uint256 amount, address account) public onlyOwner {
+    function unstakeWCleth( address account,uint256 amount) public onlyOwner {
         require(amount != 0, "Amount can not be zero");
         require(account != address(0), "Zero address");
         require(StakedBalance[account] >= amount, "Not enough staked ETH");
+        StakeHolder stakedHolderContract = StakeHolders[account];
+        require( WithdrawalBalance[account] + amount <= clETH.balanceOf(address(stakedHolderContract)), "not enough cleth");
         WithdrawalBalance[account] += amount;
         StakedBalance[account] -= amount;
         totalPoolStake -= amount;
-        emit Unstaked(account, amount);
+        emit UnstakedArb(account, amount);
     }
     function burnCleth(address account,uint256 amount) external onlyOwner {
         require(account != address(0), "Account is zero address");
@@ -110,6 +115,7 @@ contract StakingMaster {
             address(StakeHolders[msg.sender]),
             amount
         );
+        WithdrawalBalance[msg.sender] += amount;
         StakedBalance[msg.sender] -= amount;
         totalPoolStake -= amount;
         emit Unstaked(msg.sender, amount);

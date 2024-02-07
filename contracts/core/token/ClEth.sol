@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -14,7 +14,7 @@ contract CLETH is ERC20, AccessControl, Pausable {
 
     mapping(address => uint256) public rewards;
 
-    constructor() ERC20("CLETH Token", "CLETH") {
+    constructor() ERC20("clETH Token", "clETH") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -25,7 +25,8 @@ contract CLETH is ERC20, AccessControl, Pausable {
         require(amount > 0, "CLETH: mint amount must be greater than zero");
         _mint(to, amount);
     }
-
+// 0xFd7012D3beCCc0836070F43ae15663717B57Ac2d cleth 
+// 0x4eF4E73186B6DC5f89c3342f1CC10949c4cfe02B staking master 
     function burn(
         address from,
         uint256 amount

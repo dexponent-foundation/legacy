@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
+pragma solidity ^0.8.19;
 import "../interfaces/IFigmentEth2Depositor.sol"; // Import the interface
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 contract StakeHolder {
     address public staker;
     address public masterContractOwner;
+    address public  masterContract;
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
@@ -17,11 +15,13 @@ contract StakeHolder {
     constructor(
         address _staker,
         address _masterContract,
+        address _masterContractOwner,
         IFigmentEth2Depositor _figmentDepositor,
         IERC20 _clethToken
     ) payable {
         staker = _staker;
-        masterContractOwner = _masterContract;
+        masterContractOwner = _masterContractOwner;
+        masterContract = _masterContract;
         figmentDepositor = _figmentDepositor;
         clethToken = _clethToken;
         emit DepositReceived(_staker, msg.value);
@@ -31,7 +31,8 @@ contract StakeHolder {
         emit DepositReceived(msg.sender, msg.value);
     }
 
-    function withdrawETH(uint256 amount,address account) public onlyMasterOwner {
+    function withdrawETH(uint256 amount,address account) public  {
+        require(msg.sender == masterContract,"revert caller is not owner");
         require(
             amount > 0 && amount <= address(this).balance,
             "Invalid withdrawal amount"
@@ -71,14 +72,6 @@ contract StakeHolder {
             "Caller is not the master owner"
         );
         _;
-    }
-
-    function receiveCleth(uint256 amount) external {
-        require(
-            clethToken.transferFrom(msg.sender, address(this), amount),
-            "Transfer failed"
-        );
-        emit ClethReceived(msg.sender, amount);
     }
 
     // Function to get the balance of Cleth tokens
