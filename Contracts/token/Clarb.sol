@@ -4,14 +4,14 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract CLMatic is ERC20, AccessControl, Pausable {
+// 0x4a8F476b2c4d8b31F73710bB599fB56791c2Cc4b clarb
+contract ClARB is ERC20, AccessControl, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     mapping(address => uint256) public rewards;
 
-    constructor() ERC20("CLMATIC Token", "CLMATIC") {
+    constructor() ERC20("CLARB Token", "CLARB") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 

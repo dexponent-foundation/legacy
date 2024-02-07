@@ -1,25 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-import "./token/CLMatic.sol";
+import "./token/Clarb.sol";
 import "./StakeHolder.sol";
 import "hardhat/console.sol";
 
 // use deposit to staking master
 // call the buyVoucher funcation validator
 // deposit 1 Matic as of now
-// and mint CLMatic for user
+// and mint clARB for user
 // also withdraw funds call sellVoucher_new on contract
-
+// 0xA5950BaD8944A60830554d63dAF10895c5ea4E76 staking master 
+// 0x4a8F476b2c4d8b31F73710bB599fB56791c2Cc4b cleth
+// arb token 0x36f9cD0914314BDFF5cCC9604780d0B07E719b5B
 contract StakingMaster {
-    CLMatic private clMatic;
+    ClARB private clARB;
     uint256 public totalPool;
     uint256 public lockDuration = 1;
-    address public stakeManager = 0x00200eA4Ee292E253E6Ca07dBA5EdC07c8Aa37A3;
-    address constant MATIC = 0x499d11E0b6eAC7c0593d8Fb292DCBbF815Fb29Ae;
     address public owner;
     mapping(address => StakeHolder) public stakeHolders;
     mapping(address => uint256) public stakedBalance;
-
+    //  change this address when you go for mainnet to mainnet ARB
+    IERC20 constant ARB = IERC20(0x36f9cD0914314BDFF5cCC9604780d0B07E719b5B);
 
 
     event Unstaked(address indexed user, uint256 amount);
@@ -34,8 +35,8 @@ contract StakingMaster {
     event DepositReceived(address indexed depositor, uint256 amount);
     event WithdrawalMade(address indexed receiver, uint256 amount);
 
-    constructor(CLMatic _clMatic, address _matic) {
-        clMatic = _clMatic;
+    constructor(ClARB _clARB) {
+        clARB = _clARB;
         owner = msg.sender;
     }
 
@@ -44,36 +45,36 @@ contract StakingMaster {
         _;
     }
 
-    function stake(uint256 amount,address validator) public {
-        require(amount > 1, "Must send ETH to stake");
+    function stake(uint256 amount) public {
         StakeHolder stakeHolder = stakeHolders[msg.sender];
         if (address(stakeHolder) == address(0)) {
-            stakeHolder = new StakeHolder(msg.sender, address(this), clMatic);
+            stakeHolder = new StakeHolder(msg.sender, address(this), clARB,ARB);
             stakeHolders[msg.sender] = stakeHolder;
         }
-        IERC20 token = IERC20(MATIC);
+        IERC20 token = IERC20(ARB);
         require(token.transferFrom(msg.sender, address(stakeHolder), amount));
-        stakeHolder._buyVoucher(amount, 0, validator, token);
         stakedBalance[msg.sender] += amount;
         totalPool += amount;
-        clMatic.mint(msg.sender, amount);
+        clARB.mint(msg.sender, amount);
         emit Staked(msg.sender, stakeHolder, amount);
     }
 
 
 
-    function unstake(uint256 amount,address validator) public  {
+    function unstake(uint256 amount) public  {
         require(amount != 0, "Amount can not be zero");
         require(stakedBalance[msg.sender] >= amount, "Not enough staked ETH");
-        require(clMatic.balanceOf(msg.sender) >= amount, "Not enough ClMatic");
-        clMatic.burn(msg.sender, amount);
+        require(clARB.balanceOf(msg.sender) >= amount, "Not enough clARB");
+        clARB.burn(msg.sender, amount);
         stakedBalance[msg.sender] -= amount;
         totalPool -= amount;
         StakeHolder user = stakeHolders[msg.sender];
-        user._sellVoucher(amount, amount, validator);
+        user.withdrawArb(amount,msg.sender);
         emit Unstaked(msg.sender, amount);
     }
-
+// 0x36f9cD0914314BDFF5cCC9604780d0B07E719b5B arb token 
+//  clarb 0x4a8F476b2c4d8b31F73710bB599fB56791c2Cc4b
+//  staking master 0xa1108008EC3EaAE70ce7A9B476769870a1ba95c6
 
 
 }
