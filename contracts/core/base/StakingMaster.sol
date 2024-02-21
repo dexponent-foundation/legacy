@@ -7,6 +7,7 @@ import {IFigmentEth2Depositor} from "../interfaces/IFigmentEth2Depositor.sol";
 
 contract StakingMaster {
     CLETH clETH;
+    uint256 constant MAX_DEPOSIT_AMOUNT = 32 ether;
     IFigmentEth2Depositor public figmentDepositor;
     address public owner;
     uint256 public totalPoolStake;
@@ -15,7 +16,7 @@ contract StakingMaster {
     mapping(address => uint256) public WithdrawalBalance;
     event Unstaked(address indexed user, uint256 amount);
 
-    event UnstakedArb(address indexed user, uint256 amount);
+    event withdrawalStatusUpdated(address indexed user, uint256 amount);
     event Staked(
         address indexed user,
         StakeHolder stakeHolderContract,
@@ -27,10 +28,8 @@ contract StakingMaster {
         uint256 amount
     );
     event UnstakedDone(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-    event RewardsRestaked(address indexed user, uint256 amount);
-    event DepositReceived(address indexed depositor, uint256 amount);
-    event WithdrawalMade(address indexed receiver, uint256 amount);
+    event WclethRewards(address indexed account, uint256 amount);
+    event ClethRewards(address indexed account, uint256 amount);
 
     constructor(CLETH _clETH) {
         clETH = _clETH;
@@ -49,8 +48,7 @@ contract StakingMaster {
     }
 
     function stake() public payable {
-        // require(amount > 1e18, "Must send ETH to stake");
-        // TODO : add check to deposit 32 ETH
+        require(msg.value >= MAX_DEPOSIT_AMOUNT, "Must send ETH to stake");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
         stakeHolder = _stake(stakeHolder);
         clETH.mint(address(msg.sender), msg.value);
@@ -58,8 +56,7 @@ contract StakingMaster {
     }
 
     function stakeForWCLETH() public payable {
-        // require(amount > 1e18, "Must send ETH to stake");
-        // TODO : add check to deposit 32 ETH
+        require(msg.value >= MAX_DEPOSIT_AMOUNT, "Must send ETH to stake");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
         stakeHolder = _stake(stakeHolder);
         clETH.mint(address(stakeHolder), msg.value);
@@ -85,25 +82,67 @@ contract StakingMaster {
         return stakeHolder;
     }
 
-    function unstakeWCleth( address account,uint256 amount) public onlyOwner {
+    function updateWithdrawalStatus(address account, uint256 amount) public onlyOwner {
         require(amount != 0, "Amount can not be zero");
         require(account != address(0), "Zero address");
         require(StakedBalance[account] >= amount, "Not enough staked ETH");
         StakeHolder stakedHolderContract = StakeHolders[account];
-        require( WithdrawalBalance[account] + amount <= clETH.balanceOf(address(stakedHolderContract)), "not enough cleth");
+        require(
+            WithdrawalBalance[account] + amount <=
+                clETH.balanceOf(address(stakedHolderContract)),
+            "not enough cleth"
+        );
         WithdrawalBalance[account] += amount;
+        emit withdrawalStatusUpdated(account, amount);
+    }
+
+    function burnCleth(address account, uint256 amount) external onlyOwner {
+        require(account != address(0), "Account is zero address");
+        require(
+            amount <= WithdrawalBalance[account],
+            "withdrawal amount is not enough"
+        );
+        StakeHolder stakedHolderContract = StakeHolders[account];
+        WithdrawalBalance[account] -= amount;
         StakedBalance[account] -= amount;
         totalPoolStake -= amount;
-        emit UnstakedArb(account, amount);
-    }
-    function burnCleth(address account,uint256 amount) external onlyOwner {
-        require(account != address(0), "Account is zero address");
-        require(amount <= WithdrawalBalance[account],"withdrawalBalance is none");
-        StakeHolder stakedHolderContract = StakeHolders[account];
-        WithdrawalBalance[account]  -= amount;
         clETH.burn(address(stakedHolderContract), amount);
-        stakedHolderContract.withdrawETH(amount,account);
-        emit UnstakedDone(account,amount);
+        stakedHolderContract.withdrawETH(amount, account);
+        emit UnstakedDone(account, amount);
+    }
+
+    function claimRewardForCleth(
+        address account,
+        uint256 amount
+    ) external onlyOwner {
+        claimReward(account, account, amount);
+        emit ClethRewards(account, amount);
+    }
+
+    function claimRewardForWcleth(
+        address account,
+        uint256 amount
+    ) external onlyOwner {
+        StakeHolder stakeHolder = StakeHolders[account];
+        claimReward(address(stakeHolder), account, amount);
+        emit WclethRewards(account, amount);
+    }
+
+    function claimReward(
+        address clETHMintTo,
+        address account,
+        uint256 amount
+    ) internal {
+        require(amount > 0, "Zero amount");
+        require(account != address(0), "Account is zero address");
+        StakeHolder stakeHolder = StakeHolders[account];
+        require(address(stakeHolder) != address(0), "Invalid Account");
+        require(
+            address(stakeHolder).balance >= amount,
+            "Insufficient Rewards to claim"
+        );
+        clETH.mint(clETHMintTo, amount);
+        stakeHolder.withdrawETH(amount, stakeHolder.masterContract());
     }
 
     function unstake(uint256 amount) public {
@@ -116,8 +155,7 @@ contract StakingMaster {
             amount
         );
         WithdrawalBalance[msg.sender] += amount;
-        StakedBalance[msg.sender] -= amount;
-        totalPoolStake -= amount;
         emit Unstaked(msg.sender, amount);
     }
+    receive() external payable {} 
 }

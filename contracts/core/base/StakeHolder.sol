@@ -2,11 +2,13 @@
 pragma solidity ^0.8.19;
 import "../interfaces/IFigmentEth2Depositor.sol"; // Import the interface
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 contract StakeHolder {
     address public staker;
     address public masterContractOwner;
-    address public  masterContract;
+    address public masterContract;
     IFigmentEth2Depositor public figmentDepositor;
+
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
     event FundsSent(address indexed to, uint256 amount);
@@ -31,8 +33,8 @@ contract StakeHolder {
         emit DepositReceived(msg.sender, msg.value);
     }
 
-    function withdrawETH(uint256 amount,address account) public  {
-        require(msg.sender == masterContract,"revert caller is not owner");
+    function withdrawETH(uint256 amount, address account) public {
+        require(msg.sender == masterContract, "revert caller is not owner");
         require(
             amount > 0 && amount <= address(this).balance,
             "Invalid withdrawal amount"
@@ -40,12 +42,11 @@ contract StakeHolder {
         (bool success, ) = address(account).call{value: amount}("");
         require(success, "Transfer failed");
     }
-
     function depositToFigment(
-        bytes calldata pubkeys,
-        bytes calldata withdrawal_credentials,
-        bytes calldata signatures,
-        bytes32 deposit_data_roots
+        bytes[] calldata pubkeys,
+        bytes[] calldata withdrawal_credentials,
+        bytes[] calldata signatures,
+        bytes32[] calldata deposit_data_roots
     ) external onlyMasterOwner {
         require(
             address(figmentDepositor) != address(0),
@@ -56,7 +57,6 @@ contract StakeHolder {
             address(this).balance >= depositAmount,
             "Insufficient balance for deposit"
         );
-
         // Forward 32 ETH from this contract to the Figment Depositor
         figmentDepositor.deposit{value: depositAmount}(
             pubkeys,
@@ -72,10 +72,5 @@ contract StakeHolder {
             "Caller is not the master owner"
         );
         _;
-    }
-
-    // Function to get the balance of Cleth tokens
-    function getClethBalance() external view returns (uint256) {
-        return clethToken.balanceOf(address(this));
     }
 }
