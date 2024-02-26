@@ -1,0 +1,7 @@
+.env
+node_modules
+artifacts
+cache
+yarn-error.log
+.DS_Store
+.vscode
