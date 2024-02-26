@@ -25,35 +25,12 @@ contract CLETH is ERC20, AccessControl, Pausable {
         require(amount > 0, "CLETH: mint amount must be greater than zero");
         _mint(to, amount);
     }
-// 0xFd7012D3beCCc0836070F43ae15663717B57Ac2d cleth 
-// 0x4eF4E73186B6DC5f89c3342f1CC10949c4cfe02B staking master 
     function burn(
         address from,
         uint256 amount
     ) external onlyRole(BURNER_ROLE) whenNotPaused {
         require(amount > 0, "CLETH: burn amount must be greater than zero");
         _burn(from, amount);
-    }
-
-    function addReward(
-        address account,
-        uint256 amount
-    ) public onlyRole(MINTER_ROLE) {
-        rewards[account] += amount;
-    }
-
-    function setReward(
-        address account,
-        uint256 amount
-    ) public onlyRole(MINTER_ROLE) {
-        rewards[account] = amount;
-    }
-
-    function claimReward(address account) public {
-        uint256 reward = rewards[account];
-        require(reward > 0, "No rewards to claim");
-        rewards[account] = 0;
-        _mint(account, reward);
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {

@@ -4,37 +4,16 @@ import "../token/ClEth.sol";
 import "./StakeHolder.sol";
 import "hardhat/console.sol";
 import {IFigmentEth2Depositor} from "../interfaces/IFigmentEth2Depositor.sol";
-
-contract StakingMaster {
-    CLETH clETH;
-    uint256 constant MAX_DEPOSIT_AMOUNT = 32 ether;
-    IFigmentEth2Depositor public figmentDepositor;
-    address public owner;
-    uint256 public totalPoolStake;
-    mapping(address => StakeHolder) public StakeHolders;
-    mapping(address => uint256) public StakedBalance;
-    mapping(address => uint256) public WithdrawalBalance;
-    event Unstaked(address indexed user, uint256 amount);
-
-    event withdrawalStatusUpdated(address indexed user, uint256 amount);
-    event Staked(
-        address indexed user,
-        StakeHolder stakeHolderContract,
-        uint256 amount
-    );
-    event StakedForWCelth(
-        address indexed user,
-        StakeHolder stakeHolderContract,
-        uint256 amount
-    );
-    event UnstakedDone(address indexed user, uint256 amount);
-    event WclethRewards(address indexed account, uint256 amount);
-    event ClethRewards(address indexed account, uint256 amount);
-
-    constructor(CLETH _clETH) {
-        clETH = _clETH;
+import "./StakingMasterStorage.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+contract StakingMaster is Initializable, StakingMasterStorage, Events{
+   function setUp(
+      address  _clethToken
+    ) public virtual  initializer {
+         clETH = CLETH(_clethToken);
         owner = msg.sender;
     }
+
 
     function setFigmentDepositor(
         IFigmentEth2Depositor _figmentDepositor
@@ -159,3 +138,5 @@ contract StakingMaster {
     }
     receive() external payable {} 
 }
+
+
