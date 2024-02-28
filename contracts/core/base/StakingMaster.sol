@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 import "../token/ClEth.sol";
 import "./StakeHolder.sol";
-import "hardhat/console.sol";
 import {IFigmentEth2Depositor} from "../interfaces/IFigmentEth2Depositor.sol";
 import "./StakingMasterStorage.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
