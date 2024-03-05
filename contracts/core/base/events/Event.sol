@@ -18,4 +18,5 @@ contract Events {
     event UnstakedDone(address indexed user, uint256 amount);
     event WclethRewards(address indexed account, uint256 amount);
     event ClethRewards(address indexed account, uint256 amount);
+    event ownerUpdated(address indexed oldOwner,address indexed newOwner);
 }

@@ -1,7 +1,7 @@
 pragma solidity =0.8.20;
 import "../base/StakingMasterStorage.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-contract dexProxy is StakingMasterStorage, TransparentUpgradeableProxy {    address admin;
+contract DexProxy is StakingMasterStorage, TransparentUpgradeableProxy {    address admin;
     address proxyAdmin;
     constructor(
         address _logic,

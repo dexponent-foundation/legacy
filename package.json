@@ -4,6 +4,7 @@
     "build": "hardhat compile",
     "deploy:network": "hardhat run --network",
     "test": "hardhat test --trace",
+    "trace": "npx hardhat trace --hash",
     "clean": "hardhat clean",
     "build:watch": "hardhat watch compilation",
     "test:watch": "hardhat watch test_mainnet",

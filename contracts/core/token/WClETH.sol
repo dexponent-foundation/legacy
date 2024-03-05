@@ -41,7 +41,5 @@ contract wclETH is
         _unpause();
     }
 
-    function unpaus1e() public pure returns (string memory) {
-        return "HELLo";
-    }
+
 }

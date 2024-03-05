@@ -7,8 +7,6 @@ import "./StakeHolder.sol";
 import "./events/Event.sol";
 
 abstract contract StakingMasterStorage {
-
-
     CLETH public clETH;
     uint256 constant MAX_DEPOSIT_AMOUNT = 32 ether;
     IFigmentEth2Depositor public figmentDepositor;

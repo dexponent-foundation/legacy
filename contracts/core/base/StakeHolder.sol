@@ -8,7 +8,6 @@ contract StakeHolder {
     address public masterContractOwner;
     address public masterContract;
     IFigmentEth2Depositor public figmentDepositor;
-
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
     event FundsSent(address indexed to, uint256 amount);

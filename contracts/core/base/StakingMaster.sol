@@ -5,15 +5,17 @@ import "./StakeHolder.sol";
 import {IFigmentEth2Depositor} from "../interfaces/IFigmentEth2Depositor.sol";
 import "./StakingMasterStorage.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 contract StakingMaster is Initializable, StakingMasterStorage, Events{
+    using Math for uint256;
    function setUp(
-      address  _clethToken
+      address  _clethToken,
+      address _figmentDepositor
     ) public virtual  initializer {
          clETH = CLETH(_clethToken);
-        owner = msg.sender;
+         owner = msg.sender;
+         figmentDepositor = IFigmentEth2Depositor(_figmentDepositor);
     }
-
-
     function setFigmentDepositor(
         IFigmentEth2Depositor _figmentDepositor
     ) external onlyOwner {
@@ -26,13 +28,12 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
     }
 
     function stake() public payable {
-        require(msg.value >= MAX_DEPOSIT_AMOUNT, "Must send ETH to stake");
+        require(msg.value >= MAX_DEPOSIT_AMOUNT, "ETH MUST BE IN THE MUTLIPLE OF 32");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
         stakeHolder = _stake(stakeHolder);
         clETH.mint(address(msg.sender), msg.value);
         emit Staked(msg.sender, stakeHolder, msg.value);
     }
-
     function stakeForWCLETH() public payable {
         require(msg.value >= MAX_DEPOSIT_AMOUNT, "Must send ETH to stake");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
@@ -63,12 +64,14 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
     function updateWithdrawalStatus(address account, uint256 amount) public onlyOwner {
         require(amount != 0, "Amount can not be zero");
         require(account != address(0), "Zero address");
-        require(StakedBalance[account] >= amount, "Not enough staked ETH");
+        uint256 stakedAmount = StakedBalance[msg.sender];
+        require(stakedAmount >= amount, "Not enough staked ETH");
+        (,uint256 leftSatked) =  stakedAmount.trySub(WithdrawalBalance[msg.sender]);
+        require(leftSatked > 0 ,"Not enough staked ETH");
         StakeHolder stakedHolderContract = StakeHolders[account];
         require(
             WithdrawalBalance[account] + amount <=
-                clETH.balanceOf(address(stakedHolderContract)),
-            "not enough cleth"
+                clETH.balanceOf(address(stakedHolderContract)), "not enough cleth"
         );
         WithdrawalBalance[account] += amount;
         emit withdrawalStatusUpdated(account, amount);
@@ -125,7 +128,10 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
 
     function unstake(uint256 amount) public {
         require(amount != 0, "Amount can not be zero");
-        require(StakedBalance[msg.sender] >= amount, "Not enough staked ETH");
+        uint256 stakedAmount = StakedBalance[msg.sender];
+        require(stakedAmount >= amount, "Not enough staked ETH");
+        (,uint256 leftSatked) =  stakedAmount.trySub(WithdrawalBalance[msg.sender]);
+        require(leftSatked > 0 ,"Not enough staked ETH");
         require(clETH.balanceOf(msg.sender) >= amount, "Not enough clETH");
         clETH.transferFrom(
             msg.sender,
@@ -134,6 +140,13 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
         );
         WithdrawalBalance[msg.sender] += amount;
         emit Unstaked(msg.sender, amount);
+    }
+
+    function changeOwner(address newOwner) external onlyOwner {
+        require(newOwner!= address(0),"Zero address");
+        emit ownerUpdated(owner,newOwner);
+        owner = newOwner;
+
     }
     receive() external payable {} 
 }
