@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "./Storage.sol";
+import "./LoanStorage.sol";
 contract LoanLogic is LoanStorage {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     event CollateralLiquidated(uint256 indexed loanId, uint256 collateralAmount);
