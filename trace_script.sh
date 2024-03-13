@@ -11,4 +11,7 @@ fi
 #1. arbitrum-sepolia
 #2. arbitrum-mainnet
 #3. sepolia.infura
-yarn trace $TRANSACTION_HASH --rpc  https://${CHAIN_NAME}.infura.io/v3/44bc61f9083149c3a96b0d37f08ed8c0
+# yarn trace $TRANSACTION_HASH --rpc  https://${CHAIN_NAME}.infura.io/v3/44bc61f9083149c3a96b0d37f08ed8c0
+
+ yarn trace $TRANSACTION_HASH --rpc  https://${CHAIN_NAME}.infura.io/v3/44bc61f9083149c3a96b0d37f08ed8c0
+

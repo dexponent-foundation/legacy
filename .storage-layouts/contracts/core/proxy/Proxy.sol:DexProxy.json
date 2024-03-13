@@ -1,0 +1,139 @@
+{
+  "storage": [
+    {
+      "astId": 5192,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "clETH",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_contract(CLETH)5606"
+    },
+    {
+      "astId": 5198,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "figmentDepositor",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_contract(IFigmentEth2Depositor)5316"
+    },
+    {
+      "astId": 5200,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "owner",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_address"
+    },
+    {
+      "astId": 5202,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "totalPoolStake",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_uint256"
+    },
+    {
+      "astId": 5207,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "StakeHolders",
+      "offset": 0,
+      "slot": "4",
+      "type": "t_mapping(t_address,t_contract(StakeHolder)4532)"
+    },
+    {
+      "astId": 5211,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "StakedBalance",
+      "offset": 0,
+      "slot": "5",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 5215,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "WithdrawalBalance",
+      "offset": 0,
+      "slot": "6",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 5219,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "totalRewardsClaimed",
+      "offset": 0,
+      "slot": "7",
+      "type": "t_mapping(t_address,t_uint256)"
+    },
+    {
+      "astId": 5224,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "__dex_gap",
+      "offset": 0,
+      "slot": "8",
+      "type": "t_array(t_uint256)50_storage"
+    },
+    {
+      "astId": 5326,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "admin",
+      "offset": 0,
+      "slot": "58",
+      "type": "t_address"
+    },
+    {
+      "astId": 5328,
+      "contract": "contracts/core/proxy/Proxy.sol:DexProxy",
+      "label": "proxyAdmin",
+      "offset": 0,
+      "slot": "59",
+      "type": "t_address"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": "20"
+    },
+    "t_array(t_uint256)50_storage": {
+      "base": "t_uint256",
+      "encoding": "inplace",
+      "label": "uint256[50]",
+      "numberOfBytes": "1600"
+    },
+    "t_contract(CLETH)5606": {
+      "encoding": "inplace",
+      "label": "contract CLETH",
+      "numberOfBytes": "20"
+    },
+    "t_contract(IFigmentEth2Depositor)5316": {
+      "encoding": "inplace",
+      "label": "contract IFigmentEth2Depositor",
+      "numberOfBytes": "20"
+    },
+    "t_contract(StakeHolder)4532": {
+      "encoding": "inplace",
+      "label": "contract StakeHolder",
+      "numberOfBytes": "20"
+    },
+    "t_mapping(t_address,t_contract(StakeHolder)4532)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => contract StakeHolder)",
+      "numberOfBytes": "32",
+      "value": "t_contract(StakeHolder)4532"
+    },
+    "t_mapping(t_address,t_uint256)": {
+      "encoding": "mapping",
+      "key": "t_address",
+      "label": "mapping(address => uint256)",
+      "numberOfBytes": "32",
+      "value": "t_uint256"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    }
+  }
+}

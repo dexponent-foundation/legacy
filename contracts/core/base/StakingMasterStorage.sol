@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity =0.8.20;
+pragma solidity ^0.8.20;
 import "../token/ClEth.sol";
 import {IFigmentEth2Depositor} from "../interfaces/IFigmentEth2Depositor.sol";
 import "./StakeHolder.sol";
@@ -11,6 +11,7 @@ abstract contract StakingMasterStorage {
     uint256 constant MAX_DEPOSIT_AMOUNT = 32 ether;
     IFigmentEth2Depositor public figmentDepositor;
     address public owner;
+        address public owner23;
     uint256 public totalPoolStake;
     mapping(address => StakeHolder) public StakeHolders;
     mapping(address => uint256) public StakedBalance;

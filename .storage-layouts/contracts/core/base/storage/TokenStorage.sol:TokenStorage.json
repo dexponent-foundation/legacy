@@ -1,0 +1,25 @@
+{
+  "storage": [
+    {
+      "astId": 5297,
+      "contract": "contracts/core/base/storage/TokenStorage.sol:TokenStorage",
+      "label": "__token_gap",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_array(t_uint256)50_storage"
+    }
+  ],
+  "types": {
+    "t_array(t_uint256)50_storage": {
+      "base": "t_uint256",
+      "encoding": "inplace",
+      "label": "uint256[50]",
+      "numberOfBytes": "1600"
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": "32"
+    }
+  }
+}

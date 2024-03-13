@@ -1,0 +1,61 @@
+{
+  "storage": [
+    {
+      "astId": 4333,
+      "contract": "contracts/core/base/StakeHolder.sol:StakeHolder",
+      "label": "staker",
+      "offset": 0,
+      "slot": "0",
+      "type": "t_address"
+    },
+    {
+      "astId": 4335,
+      "contract": "contracts/core/base/StakeHolder.sol:StakeHolder",
+      "label": "masterContractOwner",
+      "offset": 0,
+      "slot": "1",
+      "type": "t_address"
+    },
+    {
+      "astId": 4337,
+      "contract": "contracts/core/base/StakeHolder.sol:StakeHolder",
+      "label": "masterContract",
+      "offset": 0,
+      "slot": "2",
+      "type": "t_address"
+    },
+    {
+      "astId": 4340,
+      "contract": "contracts/core/base/StakeHolder.sol:StakeHolder",
+      "label": "figmentDepositor",
+      "offset": 0,
+      "slot": "3",
+      "type": "t_contract(IFigmentEth2Depositor)5316"
+    },
+    {
+      "astId": 4343,
+      "contract": "contracts/core/base/StakeHolder.sol:StakeHolder",
+      "label": "clethToken",
+      "offset": 0,
+      "slot": "4",
+      "type": "t_contract(IERC20)2842"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": "20"
+    },
+    "t_contract(IERC20)2842": {
+      "encoding": "inplace",
+      "label": "contract IERC20",
+      "numberOfBytes": "20"
+    },
+    "t_contract(IFigmentEth2Depositor)5316": {
+      "encoding": "inplace",
+      "label": "contract IFigmentEth2Depositor",
+      "numberOfBytes": "20"
+    }
+  }
+}

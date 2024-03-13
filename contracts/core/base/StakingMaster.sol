@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 import "../token/ClEth.sol";
 import "./StakeHolder.sol";
 import {IFigmentEth2Depositor} from "../interfaces/IFigmentEth2Depositor.sol";
 import "./StakingMasterStorage.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-contract StakingMaster is Initializable, StakingMasterStorage, Events{
+contract StakingMaster is Initializable,ReentrancyGuardUpgradeable,StakingMasterStorage, Events{
     using Math for uint256;
    function setUp(
       address  _clethToken,
@@ -15,6 +16,7 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
          clETH = CLETH(_clethToken);
          owner = msg.sender;
          figmentDepositor = IFigmentEth2Depositor(_figmentDepositor);
+         __ReentrancyGuard_init();
     }
     function setFigmentDepositor(
         IFigmentEth2Depositor _figmentDepositor
@@ -27,14 +29,14 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
         _;
     }
 
-    function stake() public payable {
+    function stake() public nonReentrant payable {
         require(msg.value >= MAX_DEPOSIT_AMOUNT, "ETH MUST BE IN THE MUTLIPLE OF 32");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
         stakeHolder = _stake(stakeHolder);
         clETH.mint(address(msg.sender), msg.value);
         emit Staked(msg.sender, stakeHolder, msg.value);
     }
-    function stakeForWCLETH() public payable {
+    function stakeForWCLETH() public nonReentrant payable {
         require(msg.value >= MAX_DEPOSIT_AMOUNT, "Must send ETH to stake");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
         stakeHolder = _stake(stakeHolder);
@@ -61,7 +63,7 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
         return stakeHolder;
     }
 
-    function updateWithdrawalStatus(address account, uint256 amount) public onlyOwner {
+    function updateWithdrawalStatus(address account, uint256 amount) public nonReentrant onlyOwner {
         require(amount != 0, "Amount can not be zero");
         require(account != address(0), "Zero address");
         uint256 stakedAmount = StakedBalance[msg.sender];
@@ -77,7 +79,7 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
         emit withdrawalStatusUpdated(account, amount);
     }
 
-    function burnCleth(address account, uint256 amount) external onlyOwner {
+    function burnCleth(address account, uint256 amount) external nonReentrant onlyOwner {
         require(account != address(0), "Account is zero address");
         require(
             amount <= WithdrawalBalance[account],
@@ -95,15 +97,15 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
     function claimRewardForCleth(
         address account,
         uint256 amount
-    ) external onlyOwner {
-        claimReward(account, account, amount);
+    ) external nonReentrant  onlyOwner {
+         (account, account, amount);
         emit ClethRewards(account, amount);
     }
 
     function claimRewardForWcleth(
         address account,
         uint256 amount
-    ) external onlyOwner {
+    ) external nonReentrant  onlyOwner {
         StakeHolder stakeHolder = StakeHolders[account];
         claimReward(address(stakeHolder), account, amount);
         emit WclethRewards(account, amount);
@@ -126,7 +128,7 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
         stakeHolder.withdrawETH(amount, stakeHolder.masterContract());
     }
 
-    function unstake(uint256 amount) public {
+    function unstake(uint256 amount) public nonReentrant{
         require(amount != 0, "Amount can not be zero");
         uint256 stakedAmount = StakedBalance[msg.sender];
         require(stakedAmount >= amount, "Not enough staked ETH");
@@ -142,7 +144,7 @@ contract StakingMaster is Initializable, StakingMasterStorage, Events{
         emit Unstaked(msg.sender, amount);
     }
 
-    function changeOwner(address newOwner) external onlyOwner {
+    function changeOwner(address newOwner) external nonReentrant onlyOwner {
         require(newOwner!= address(0),"Zero address");
         emit ownerUpdated(owner,newOwner);
         owner = newOwner;

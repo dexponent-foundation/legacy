@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 import "../interfaces/IFigmentEth2Depositor.sol"; // Import the interface
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

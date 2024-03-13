@@ -2,8 +2,34 @@ require("dotenv").config();
 require("@nomiclabs/hardhat-waffle");
 require("@nomicfoundation/hardhat-verify");
 require("hardhat-tracer");
+require("hardhat-storage-layout");
+require("hardhat-storage-layout-changes");
+require("hardhat-gas-reporter");
 module.exports = {
-  solidity: "0.8.20",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            runs: 200,
+            enabled: true,
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "metadata", "evm.bytecode" // Enable the metadata and bytecode outputs of every single contract.
+                , "evm.bytecode.sourceMap", // Enable the source map output of every single contract.
+                "storageLayout"
+              ],
+              "": [
+                "ast" // Enable the AST output of every single file.
+              ]
+            },
+          },
+        },
+      },
+    ]},
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
@@ -15,11 +41,12 @@ module.exports = {
       // chainId: 5,
 
       // forking: {
-      //   url: "https://goerli.infura.io/v3/44bc61f9083149c3a96b0d37f08ed8c0",
+      //   url: "https://goerli.infura.io/v3/",
 
-      //   // url:"https://optimism-goerli.infura.io/v3/2dff452478174fdf8035dc20eadb5667"
+      //   // url:"https://optimism-goerli.infura.io/v3/"
       // },
     },
+    
   },
   georli: {
     url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
@@ -34,12 +61,20 @@ module.exports = {
     cache: "./cache",
     deploy: "./src/deploy",
     sources: "./contracts",
-    // deployments: "./deployments",
-    // artifacts: "./artifacts",
-    // storageLayouts: ".storage-layouts",
+    deployments: "./deployments",
+    artifacts: "./artifacts",
+    storageLayouts: ".storage-layouts",
   },
-  // sourcify: {
-  //   enabled: true
-  // }
+  storageLayoutConfig: {
+    contracts: ["StakingMaster"],
+    fullPath: false
+  },
+
+  gasReporter: {
+      enabled: (process.env.REPORT_GAS) ? true : false,  
+    currency: "USD",
+    gasPrice: 10,
+  },
+
 };
 

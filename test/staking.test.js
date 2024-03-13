@@ -57,6 +57,7 @@ describe("StakingMaster Contract", function () {
     it("Deposit 32ETH to smart contract", async () => {
       await stakingMasterProxy.connect(user).stake({ value: DEPOSIT_AMOUNT })
     })
+
     it("User cleth balance should be equal to 32 cleth", async () => {
       const userClethBalance = await clETH.balanceOf(user.address)
       expect(userClethBalance).to.be.equal(DEPOSIT_AMOUNT)
