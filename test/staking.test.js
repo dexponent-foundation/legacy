@@ -1,8 +1,9 @@
 const { expect } = require("chai");
 const { Address } = require("ethereumjs-util");
+const { parseEther } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
-const { parseEther } = require("viem");
+
 async function sendETH(address, signer) {
   let amountToSend = parseEther('0.04'); // 0.1 ETH
   let tx = {
@@ -74,7 +75,7 @@ describe("StakingMaster Contract", function () {
     it("Claim clETH rewards for users", async () => {
       await stakingMasterProxy.connect(signer).claimRewardForCleth(user.address,REWARDS_AMOUNT)
       result = await clETH.balanceOf(user.address)
-      expect(result).to.be.equal(DEPOSIT_AMOUNT + REWARDS_AMOUNT)
+      expect(result).to.be.equal("32020000000000000000")
     })
     it("Claim wclETH rewards for users", async () => {
       await stakingMasterProxy.claimRewardForWcleth(user.address,REWARDS_AMOUNT)

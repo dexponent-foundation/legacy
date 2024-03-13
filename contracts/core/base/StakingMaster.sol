@@ -98,14 +98,14 @@ contract StakingMaster is Initializable,ReentrancyGuardUpgradeable,StakingMaster
         address account,
         uint256 amount
     ) external nonReentrant  onlyOwner {
-         (account, account, amount);
+         claimReward(account, account, amount);
         emit ClethRewards(account, amount);
     }
 
     function claimRewardForWcleth(
         address account,
         uint256 amount
-    ) external nonReentrant  onlyOwner {
+    ) external  nonReentrant onlyOwner {
         StakeHolder stakeHolder = StakeHolders[account];
         claimReward(address(stakeHolder), account, amount);
         emit WclethRewards(account, amount);
