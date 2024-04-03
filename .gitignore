@@ -5,3 +5,5 @@ cache
 yarn-error.log
 .DS_Store
 .vscode
+coverage
+coverage.json

@@ -4,14 +4,20 @@
     "build": "hardhat compile",
     "deploy:network": "hardhat run --network",
     "test": "hardhat test --trace",
+    "trace": "npx hardhat trace --hash",
     "clean": "hardhat clean",
     "build:watch": "hardhat watch compilation",
     "test:watch": "hardhat watch test_mainnet",
-    "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol'"
+    "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol'",
+    "check-storage": "hardhat storage-layout --check",
+    "update-storage": "hardhat storage-layout --update",
+    "storage-slots": "hardhat check",
+    "coverage": "npx hardhat coverage"
   },
   "dependencies": {
+    "@chainlink/contracts": "^1.0.0",
     "@openzeppelin/contracts": "^5.0.1",
-    "@openzeppelin/contracts-upgradeable": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2",
     "dotenv": "^16.3.1"
   },
   "devDependencies": {
@@ -30,10 +36,12 @@
     "ethers": "5",
     "hardhat": "^2.19.2",
     "hardhat-gas-reporter": "^1.0.9",
+    "hardhat-storage-layout": "^0.1.7",
+    "hardhat-storage-layout-changes": "^0.1.2",
     "hardhat-tracer": "^2.7.0",
     "prettier": "^3.2.4",
     "prettier-plugin-solidity": "^1.3.1",
-    "solidity-coverage": "^0.8.6",
+    "solidity-coverage": "^0.8.11",
     "typechain": "^8.3.2"
   },
   "version": "1.0.0",
