@@ -65,9 +65,7 @@ describe("StakingMaster Contract", function () {
       it("Init to staking Master contract", async () => {
         await stakingMasterProxy.setUp(clETH.address, signer.address)
       })
-    // it("Greant role to staking master", async () => {
-    //   await clETH.grantRoles(stakingMasterProxy.address)
-    // })
+
     it("stake  32 ETH to staking master contract", async () => {
       await stakingMasterProxy.connect(user).stake({ value: DEPOSIT_AMOUNT })
     })
@@ -103,6 +101,10 @@ describe("StakingMaster Contract", function () {
       expect(stakingMasterProxy.connect(signer).claimRewardForCleth(user.address, parseEther("0"))).to.be.revertedWith("amount can not be zero")
 
    })
+   it("Claim Cleth as a Rewards for the User should be reverted as caller is not owner", async () => {
+    expect(stakingMasterProxy.connect(user).claimRewardForCleth(user.address, parseEther("10"))).to.be.reverted
+
+ })
    it("Claim Cleth as a Rewards for the User should be reverted as the amount as singer never staked for Wcleth", async () => {
     expect(stakingMasterProxy.connect(signer).claimRewardForWcleth(signer.address, parseEther("10"))).to.be.revertedWith("clETHMintTo can not be null")
  })
@@ -157,8 +159,8 @@ describe("StakingMaster Contract", function () {
     it(`While Request unstaking it Should be rejected with error ${NOT_ENOUGH_STAKED_ETH}  as we Transfered Cleth to Another User`, async () => {
       expect(stakingMasterProxy.connect(user).unstake(DEPOSIT_AMOUNT)).to.be.revertedWith("Not enough clETH")
     })
-    it(`While Request unstaking it Should be rejected with error Amount can not be zero as we are sending 0 unstaking amount`, async () => {
-      expect(stakingMasterProxy.connect(user).unstake(parseEther("0"))).to.be.revertedWith("Amount can not be zero")
+    it(`While Request unstaking it Should be rejected with error Amount cannot be zero as we are sending 0 unstaking amount`, async () => {
+      expect(stakingMasterProxy.connect(user).unstake(parseEther("0"))).to.be.revertedWith("Amount cannot be zero")
     })
     it("Transfer User cleth To user account from another account as we are done with Edge case ", async () => {
       await clETH.connect(signer).transfer(user.address, DEPOSIT_AMOUNT)
@@ -220,7 +222,10 @@ describe("StakingMaster Contract", function () {
       expect(stakingMasterProxy.connect(signer).updateWithdrawalStatus(user.address, DEPOSIT_AMOUNT + REWARDS_AMOUNT)).to.be.revertedWith("Not enough staked ETH")
     })
     it("Update User withdarawal status should be reverted as the amount is zero", async () => {
-      expect(stakingMasterProxy.connect(signer).updateWithdrawalStatus(signer.address, 0)).to.be.revertedWith("Amount can not be zero")
+      expect(stakingMasterProxy.connect(signer).updateWithdrawalStatus(signer.address, 0)).to.be.revertedWith("Amount cannot be zero")
+    })
+    it("Update User withdarawal status should be reverted as caller is not owner", async () => {
+      expect(stakingMasterProxy.connect(user).updateWithdrawalStatus(signer.address, DEPOSIT_AMOUNT)).to.be.reverted
     })
     it("send ETH to user for testing rewards", async () => {
       userISC = await ethers.getContractAt("StakeHolder", USERISC)
@@ -234,9 +239,13 @@ describe("StakingMaster Contract", function () {
      await sendETH(USERISC,signer,'0.1')
       expect(stakingMasterProxy.connect(signer).burnCleth(user.address, DEPOSIT_AMOUNT)).to.be.emit("UnstakedDone")
     })
+    it("change staking master owner should be reverted as the caller is owner", async () => {
+      expect(stakingMasterProxy.connect(user).changeOwner(user.address)).to.be.reverted
+    })
     it("change staking master owner", async () => {
       expect(stakingMasterProxy.connect(signer).changeOwner(user.address)).to.be.emit("OwnerUpdated")
     })
+
     it("change staking master owner should be reverted as the caller is not onwer", async () => {
       expect(stakingMasterProxy.connect(signer).changeOwner(user.address)).to.be.revertedWith("Only the owner can call this function")
     })
@@ -246,6 +255,7 @@ describe("StakingMaster Contract", function () {
     it("change staking master owner", async () => {
       expect(stakingMasterProxy.connect(user).changeOwner(signer.address)).to.be.emit("OwnerUpdated")
     })
+
     it("mint wclETH for user", async () => {
       await wclETH.connect(signer).mint(user.address, DEPOSIT_AMOUNT);
     })
@@ -299,6 +309,10 @@ describe("StakingMaster Contract", function () {
         ethers.constants.AddressZero
       )).to.be.revertedWith("_figmentDepositor is zero address")
     })
+    it("should reverted as the caller is not owner", async () => {
+      expect( userISC.connect(user).setFigmentDepositor(signer.address
+         )).to.be.reverted
+       })
     it("call setFigmentDepositor", async () => {
      expect( userISC.connect(signer).setFigmentDepositor(signer.address
         )).to.be.emit("UpdateFigmentDepositAddress")
@@ -320,4 +334,5 @@ describe("StakingMaster Contract", function () {
       )).to.be.revertedWith("Caller is not the master owner")
     })
   })
+  
 })

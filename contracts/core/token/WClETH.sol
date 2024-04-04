@@ -4,20 +4,19 @@ import "../base/storage/TokenStorage.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-
+import "../base/modifier/modifier.sol";
 /**
  * @title Wrapped clETH (wclETH)
  * @dev wclETH is an ERC20-compatible token representing wrapped clETH tokens.
  * Users can mint wclETH tokens by depositing clETH tokens and unstake clETH tokens by burning wclETH tokens.
  * The contract implements ERC20Upgradeable, TokenStorage, OwnableUpgradeable, and PausableUpgradeable from OpenZeppelin.
  */
-import "hardhat/console.sol";
 
 contract wclETH is
     ERC20Upgradeable,
     TokenStorage,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,Modifiers
 {
     /**
      * @dev Initializes the wclETH contract with the given name and symbol.
@@ -28,7 +27,6 @@ contract wclETH is
         string memory name_,
         string memory symbol_
     ) external initializer {
-        console.log("hello",msg.sender);
         __ERC20_init(name_, symbol_);
         __Ownable_init(msg.sender);
     }
@@ -57,8 +55,7 @@ contract wclETH is
     function unstake(
         uint256 amount,
         bytes calldata pubkeys
-    ) public whenNotPaused {
-        require(amount > 0, "WCLETH: burned amount must be greater than zero");
+    ) public whenNotPaused ZeroAmount(amount){
         require(pubkeys.length == 48, "Length of pubkeys must be 48 bytes");
         require(amount == MIN_WITHDRAWAL_AMOUNT, "Must sent 32 wclETH");
         _burn(msg.sender, amount);

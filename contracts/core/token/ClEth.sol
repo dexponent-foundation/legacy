@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Pausable
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-
+import "../base/modifier/modifier.sol";
 /**
  * @title cLETH (clETH)
  * @dev cLETH is an ERC20-compatible token representing clETH (Wrapped ETH) tokens.
@@ -15,17 +15,22 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
  * The contract implements ERC20Upgradeable, ERC20BurnableUpgradeable, ERC20PausableUpgradeable,
  * OwnableUpgradeable, and AccessControlUpgradeable from OpenZeppelin.
  */
+import "hardhat/console.sol";
+
 contract CLETH is
     Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
     ERC20PausableUpgradeable,
     OwnableUpgradeable,
-    AccessControlUpgradeable
+    AccessControlUpgradeable,
+    Modifiers
 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    event clethMinted(address to, uint256 amount);
+    event clethBurned(address from, uint256 amount);
 
     /**
      * @dev Initializes the cLETH contract with the given default admin and staking master addresses.
@@ -35,7 +40,7 @@ contract CLETH is
     function initialize(
         address defaultAdmin,
         address stakingMaster
-    ) public initializer {
+    ) public initializer ZeroAddress(defaultAdmin) ZeroAddress(stakingMaster) {
         __ERC20_init("CLETH", "clETH");
         __ERC20Burnable_init();
         __ERC20Pausable_init();
@@ -74,10 +79,9 @@ contract CLETH is
     function mint(
         address to,
         uint256 amount
-    ) external onlyRole(MINTER_ROLE) whenNotPaused {
-        require(amount > 0, "CLETH: mint amount must be greater than zero");
-        require(to != address(0), "Account is zero address");
+    ) external onlyRole(MINTER_ROLE) ZeroAmount(amount) whenNotPaused {
         _mint(to, amount);
+        emit clethMinted(to, amount);
     }
 
     /**
@@ -89,15 +93,14 @@ contract CLETH is
     function burnFrom(
         address account,
         uint256 amount
-    ) public override onlyRole(BURNER_ROLE) whenNotPaused {
-        require(account != address(0), "account is zero address");
-        require(amount > 0, "amount can't be zero");
+    ) public override  ZeroAmount(amount) onlyRole(BURNER_ROLE) whenNotPaused {
         uint256 currentAllowance = allowance(account, _msgSender());
         require(
             currentAllowance >= amount,
             "ERC20: burn amount exceeds allowance"
         );
         _burn(account, amount);
+        emit clethBurned(account, amount);
     }
 
     // The following function is an override required by Solidity.

@@ -34,7 +34,7 @@ contract StakeHolder is Events {
         address _masterContractOwner,
         IFigmentEth2Depositor _figmentDepositor,
         IERC20 _clethToken
-    ) payable {
+    ) payable  {
         staker = _staker;
         masterContractOwner = _masterContractOwner;
         masterContract = _masterContract;
