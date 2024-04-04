@@ -3,9 +3,11 @@ const { parseEther, parseUnits } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const { deployProxy, deployContract } = require("./utils");
+const Sinon = require("sinon");
+const { ZERO_ADDRESS_ERROR } = require("./constants");
 
 describe("Testing loan smart contract functions", function () {
-  let signer, user;
+  let signer, user, testuser;
   let clETH;
   let loanLogicContract;
   let usdcContract
@@ -30,9 +32,44 @@ describe("Testing loan smart contract functions", function () {
     it("Init clETH contract", async () => {
       await clETH.initialize(signer.address, signer.address);
     })
-    it("should initialize the loan contract", async () => {
-      await loanLogicContract.initialize(usdcContract.address, clETH.address, priceFeed.address);
+    it("should initialize the contract with correct initial values", async function () {
+      const clethTokenAddress = clETH.address // Example cLETH token address
+      const priceFeedAddress = priceFeed.address; // Example price feed address
+      expect(loanLogicContract.initialize(NULL_ADDRESS, clethTokenAddress, priceFeedAddress)).to.be.revertedWith("Address can not be zero");
+
     })
+    it("should initialize the contract with correct initial values", async function () {
+      const usdcTokenAddress = usdcContract.address// Example USDC token address
+      const priceFeedAddress = priceFeed.address; // Example price feed address
+      expect(loanLogicContract.initialize(usdcTokenAddress, NULL_ADDRESS, priceFeedAddress)).to.be.revertedWith("Address can not be zero");
+
+    })
+    it("should initialize the contract with correct initial values", async function () {
+      const usdcTokenAddress = usdcContract.address// Example USDC token address
+      const clethTokenAddress = clETH.address // Example cLETH token address
+      const priceFeedAddress = priceFeed.address; // Example price feed address
+      expect(loanLogicContract.initialize(usdcTokenAddress, clethTokenAddress, NULL_ADDRESS)).to.be.revertedWith("Address can not be zero");
+
+    })
+    it("should initialize the contract with correct initial values", async function () {
+
+      const usdcTokenAddress = usdcContract.address// Example USDC token address
+      const clethTokenAddress = clETH.address // Example cLETH token address
+      const priceFeedAddress = priceFeed.address; // Example price feed address
+      await loanLogicContract.initialize(usdcTokenAddress, clethTokenAddress, priceFeedAddress);
+
+      // Check contract state
+      expect(await loanLogicContract.usdcToken()).to.equal(usdcTokenAddress);
+      expect(await loanLogicContract.clethToken()).to.equal(clethTokenAddress);
+      expect(await loanLogicContract.priceFeed()).to.equal(priceFeedAddress);
+      expect(await loanLogicContract.totalLoans()).to.equal(0);
+      expect(await loanLogicContract.nextLoanId()).to.equal(1);
+      expect(await loanLogicContract.interestRateTargetUtilization()).to.equal(70);
+      expect(await loanLogicContract.interestRateK()).to.equal(1);
+      expect(await loanLogicContract.ltvTargetUtilization()).to.equal(80);
+      expect(await loanLogicContract.ltvK()).to.equal(1);
+      expect(await loanLogicContract.liquidationThreshold()).to.equal(90);
+    });
     it("should calculate the interest rate", async () => {
       await loanLogicContract.calculateInterestRate();
     })
@@ -42,7 +79,6 @@ describe("Testing loan smart contract functions", function () {
     it("should set the cleth price on the price feed", async () => {
       await priceFeed.setLatestPrice(parseEther("10"))
     })
-
   })
   describe("Testing loan flow ", async () => {
 
@@ -53,24 +89,37 @@ describe("Testing loan smart contract functions", function () {
       await usdcContract.connect(signer).mint(parseEther("10000000"), user.address)
       await usdcContract.connect(signer).mint(parseEther("10000000"), signer.address)
       await usdcContract.connect(signer).approve(loanLogicContract.address, parseEther("10000000"))
+      await usdcContract.connect(user).approve(loanLogicContract.address, parseEther("10000000"))
     })
     it("should approve USDC tokens for the loan contract", async () => {
       await clETH.connect(user).approve(loanLogicContract.address, parseEther("10000000"))
     })
+
     it("should deposit USDC to the reserve", async () => {
 
       await loanLogicContract.connect(signer).depositUSDCToReserve(parseEther("10000"))
+    })
+    it("should deposit USDC to the reserve should be revertedWith as amount is zero", async () => {
+
+      expect(loanLogicContract.connect(signer).depositUSDCToReserve(parseEther("0"))).to.be.revertedWith("Amount cannot be zero")
+    })
+    it("should deposit USDC to the reserve should be revertedWith as amount is zero", async () => {
+
+      expect(loanLogicContract.connect(user).depositUSDCToReserve(parseEther("10"))).to.be.reverted
     })
     it("should fetch the cleth price from the price feed and check if it's 10", async () => {
       const clethPrice = await loanLogicContract.fetchCLETHPrice();
       expect(clethPrice).to.equal(parseEther("10"));
     });
-    it("should calculate the maximum loan amount", async () => {
-      await loanLogicContract.calculateMaxLoanAmount(parseEther("10"));
+    it("should reverted calculate the maximum loan amount is 0 ", async () => {
+      expect(loanLogicContract.calculateMaxLoanAmount(parseEther("0"))).to.be.revertedWith("Amount cannot be zero");
     })
 
     it("should create a loan for the user", async () => {
-      expect(loanLogicContract.connect(user).createLoan(parseEther("10"))).to.be.emit("LoanCreated");
+      expect(loanLogicContract.connect(user).createLoan(parseEther("10"))).to.be.emit(loanLogicContract, "LoanCreated");
+    })
+    it("should create a loan for the user should bre reverted as the amount is zero", async () => {
+      expect(loanLogicContract.connect(user).createLoan(parseEther("0"))).to.be.revertedWith("Amount cannot be zero")
     })
     it("should revert creating a loan when there is insufficient liquidity", async () => {
       expect(loanLogicContract.connect(user).createLoan(parseEther("900"))).to.be.revertedWith("Insufficient liquidity");
@@ -78,12 +127,18 @@ describe("Testing loan smart contract functions", function () {
     it("liquidateCollateral should be reverted as loan is already repaid", async () => {
       expect(loanLogicContract.connect(user).liquidateCollateral("1")).to.be.revertedWith("Loan LTV is below liquidation threshold")
     })
+    it("liquidateCollateral should be reverted as Loan does not exist", async () => {
+      expect(loanLogicContract.connect(user).liquidateCollateral("100")).to.be.revertedWith("Loan does not exist")
+    })
     it("should check the loan repayment amount", async () => {
       const repaymentAmount = await loanLogicContract.connect(user).calculateRepaymentAmount("1");
       const interestTillNow = await loanLogicContract.connect(user).calculateInterestTillnow("1")
     });
+    it("should check the loan repayment amount should reverted as the loan does not exits", async () => {
+      expect(loanLogicContract.connect(user).calculateRepaymentAmount("10")).to.be.revertedWith("Loan does not exist");
+    });
     it("should check the loan interest till now", async () => {
-      await loanLogicContract.connect(user).calculateInterestTillnow("10")
+      expect(loanLogicContract.connect(user).calculateInterestTillnow("10")).to.be.revertedWith("Loan does not exist")
     })
     it("should approve USDC tokens for the loan contract (additional approval)", async () => {
       await usdcContract.connect(user).approve(loanLogicContract.address, parseEther("300000000000"))
@@ -95,7 +150,7 @@ describe("Testing loan smart contract functions", function () {
       await loanLogicContract.calculateMaxLTV();
     })
     it("should repay the user loan", async () => {
-      await loanLogicContract.connect(user).repayLoan("2")
+      expect(loanLogicContract.connect(user).repayLoan("2")).to.emit(loanLogicContract, "LoanRepaid").withArgs("2", user.address)
     })
 
     it("should revert repaying the user loan when the loan is already repaid", async () => {
@@ -111,6 +166,7 @@ describe("Testing loan smart contract functions", function () {
     it("should calculate the maximum loan amount", async () => {
       await loanLogicContract.calculateMaxLoanAmount(parseEther("10"));
     })
+
     it("should get the reserved balance of cLETH ", async () => {
       await loanLogicContract.getClethReservedBalance();
     })
@@ -142,7 +198,7 @@ describe("Testing loan smart contract functions", function () {
       // Test reverting liquidating collateral when the loan is already repaid or liquidated...
       expect(loanLogicContract.connect(user).liquidateCollateral("1")).to.be.revertedWith("Loan is already repaid or liquidated");
     });
-    
+
     it("should revert liquidating collateral for a non-existent loan", async () => {
       // Test reverting liquidating collateral for a non-existent loan...
       expect(loanLogicContract.connect(user).liquidateCollateral("10")).to.be.revertedWith("Loan does not exist");

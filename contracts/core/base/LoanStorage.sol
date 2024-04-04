@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+
 /**
  * @title LoanStorage
  * @dev The LoanStorage contract holds all state variables related to loans.
@@ -25,10 +26,10 @@ contract LoanStorage is Initializable, OwnableUpgradeable {
     uint256 public ltvTargetUtilization; // Loan-to-value target utilization
     uint256 public ltvK; // LTV K factor
     uint256 public liquidationThreshold; // Liquidation threshold
-    AggregatorV3Interface internal priceFeed;
-    uint256 internal lastPrice;
-    uint256 totalfund;
-    uint256 totalUSDCReserve;
+    AggregatorV3Interface public priceFeed;
+    uint256 public lastPrice;
+    uint256 public totalfund;
+    uint256 public totalUSDCReserve;
     struct Loan {
         uint256 amount; // Loan amount
         uint256 interestRate; // Interest rate

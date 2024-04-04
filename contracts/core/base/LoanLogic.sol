@@ -5,15 +5,15 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./LoanStorage.sol";
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./modifier/modifier.sol";
 
 /**
  * @title LoanLogic
  * @dev The main contract handling loan creation, repayment, collateral liquidation, and interest rate calculation.
  */
 
-contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
+contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
     using SafeERC20 for IERC20;
     using Math for uint256;
     event CollateralLiquidated(
@@ -32,6 +32,12 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
     event LoanRepaid(uint256 indexed loanId, address borrower);
     event USDCDeposited(address indexed depositor, uint256 amount);
 
+    modifier LoanIdNotExits(uint256 loanId) {
+        Loan memory loan = loans[loanId];
+        require(loan.borrower != address(0), "Loan does not exist");
+        _;
+    }
+
     /**
      * @dev Initializes the contract with necessary addresses and initial values.
      * @param _usdcTokenAddress Address of the USDC token contract.
@@ -42,7 +48,13 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
         address _usdcTokenAddress,
         address _clethTokenAddress,
         address _priceFeedAddress
-    ) public initializer {
+    )
+        public
+        initializer
+        ZeroAddress(_usdcTokenAddress)
+        ZeroAddress(_clethTokenAddress)
+        ZeroAddress(_priceFeedAddress)
+    {
         usdcToken = IERC20(_usdcTokenAddress);
         clethToken = IERC20(_clethTokenAddress);
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
@@ -69,19 +81,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
 
         ) = priceFeed.latestRoundData();
 
-        // require(price > 0, "Invalid price data");
-        // require(block.timestamp - timeStamp < 24 hours, "Price data is stale");
-
         return uint256(price);
-    }
-
-    /**
-     * @dev Modifier to ensure the amount passed is greater than zero.
-     * @param amount The amount to check.
-     */
-    modifier ZeroAmount(uint256 amount) {
-        require(amount > 0, "Amount can not be zero");
-        _;
     }
 
     /**
@@ -91,10 +91,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
     function depositUSDCToReserve(
         uint256 amount
     ) public ZeroAmount(amount) onlyOwner {
-        require(
-            usdcToken.transferFrom(msg.sender, address(this), amount),
-            "USDC transfer failed"
-        );
+        transferTokensFrom(usdcToken, msg.sender, amount);
         totalUSDCReserve += amount;
         totalfund += totalUSDCReserve;
         emit USDCDeposited(msg.sender, amount);
@@ -148,11 +145,9 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
      */
     function calculateMaxLoanAmount(
         uint256 clethAmount
-    ) public view returns (uint256) {
+    ) public view ZeroAmount(clethAmount) returns (uint256) {
         uint256 collateralValue = clethAmount * fetchCLETHPrice();
         uint256 maxLTV = calculateMaxLTV();
-
-        // require(maxLTV > 0, 'not enough to process this loan');
         return (collateralValue * maxLTV) / 100000000000000000000;
     }
 
@@ -166,10 +161,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
         uint256 maxLoanAmount = calculateMaxLoanAmount(clethAmount);
 
         require(maxLoanAmount <= totalfund, "Insufficient liquidity");
-        require(
-            clethToken.transferFrom(msg.sender, address(this), clethAmount),
-            "CLETH transfer failed"
-        );
+        transferTokensFrom(clethToken, msg.sender, clethAmount);
         uint256 interestRate = calculateInterestRate();
         loans[nextLoanId] = Loan({
             amount: maxLoanAmount,
@@ -180,11 +172,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
             borrower: msg.sender,
             collateralAmount: clethAmount
         });
-
-        require(
-            usdcToken.transfer(msg.sender, maxLoanAmount),
-            "USDC transfer failed"
-        );
+        transferTokens(usdcToken, msg.sender, maxLoanAmount);
         totalUSDCReserve -= maxLoanAmount;
         totalLoans += maxLoanAmount;
         emit LoanCreated(
@@ -203,9 +191,10 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
      * @dev Repays the specified loan.
      * @param loanId The ID of the loan to repay.
      */
-    function repayLoan(uint256 loanId) public nonReentrant {
+    function repayLoan(
+        uint256 loanId
+    ) public LoanIdNotExits(loanId) nonReentrant {
         Loan storage loan = loans[loanId];
-        require(loan.borrower != address(0), "Loan does not exist");
         require(!loan.isRepaid, "Loan already repaid");
         require(
             loan.borrower == msg.sender,
@@ -213,17 +202,12 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
         );
 
         uint256 repaymentAmount = calculateRepaymentAmount(loanId);
-        require(
-            usdcToken.transferFrom(msg.sender, address(this), repaymentAmount),
-            "Repayment failed"
-        );
+        transferTokensFrom(usdcToken, msg.sender, repaymentAmount);
+
         loan.isRepaid = true;
         totalLoans -= loan.amount;
         totalUSDCReserve += repaymentAmount;
-        require(
-            clethToken.transfer(loan.borrower, loan.collateralAmount),
-            "Collateral return failed"
-        );
+        transferTokens(clethToken, loan.borrower, loan.collateralAmount);
         emit LoanRepaid(loanId, msg.sender);
     }
 
@@ -232,9 +216,10 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
      * @param loanId The ID of the loan.
      * @return The total repayment amount.
      */
+
     function calculateRepaymentAmount(
         uint256 loanId
-    ) public view returns (uint256) {
+    ) public view LoanIdNotExits(loanId) returns (uint256) {
         Loan memory loan = loans[loanId];
         return loan.amount + calculateInterestTillnow(loanId);
     }
@@ -246,7 +231,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
      */
     function calculateInterestTillnow(
         uint256 loanId
-    ) public view returns (uint256) {
+    ) public view LoanIdNotExits(loanId) returns (uint256) {
         Loan memory loan = loans[loanId];
         uint256 timeElapsed = block.timestamp - loan.startTime;
         uint256 interest = ((loan.amount * loan.interestRate * timeElapsed) /
@@ -259,10 +244,11 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
      * @param loanId The ID of the loan.
      */
 
-    function liquidateCollateral(uint256 loanId) public nonReentrant {
+    function liquidateCollateral(
+        uint256 loanId
+    ) public LoanIdNotExits(loanId) nonReentrant {
         Loan storage loan = loans[loanId];
         require(!loan.isRepaid, "Loan is already repaid or liquidated");
-        require(loan.borrower != address(0), "Loan does not exist");
         uint256 currentPrice = fetchCLETHPrice();
 
         uint256 loanValueInCLETH = loan.debt / currentPrice;
@@ -271,11 +257,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
             currentLTV > liquidationThreshold,
             "Loan LTV is below liquidation threshold"
         );
-
-        require(
-            clethToken.transfer(address(this), loan.collateralAmount),
-            "Collateral transfer failed"
-        );
+        transferTokens(clethToken, address(this), loan.collateralAmount);
 
         loan.isRepaid = true;
         loan.debt = 0;
@@ -289,5 +271,24 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable {
      */
     function getClethReservedBalance() external view returns (uint256) {
         return IERC20(clethToken).balanceOf(address(this));
+    }
+
+    function transferTokens(
+        IERC20 token,
+        address recipient,
+        uint256 amount
+    ) internal {
+        require(token.transfer(recipient, amount), "token trasnfer failed");
+    }
+
+    function transferTokensFrom(
+        IERC20 token,
+        address from,
+        uint256 amount
+    ) internal {
+        require(
+            token.transferFrom(from, address(this), amount),
+            "trensfer from failed"
+        );
     }
 }

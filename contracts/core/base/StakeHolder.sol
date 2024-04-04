@@ -139,5 +139,4 @@ contract StakeHolder is Events {
     ) external payable {
         recipient.transfer(amount);
     }
-
 }
