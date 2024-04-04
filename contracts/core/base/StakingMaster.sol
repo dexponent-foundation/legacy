@@ -7,20 +7,19 @@ import "./StakingMasterStorage.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-
+import "./modifier/modifier.sol";
 /**
  * @title StakingMaster
  * @dev StakingMaster contract facilitates the staking and unstaking of ETH for clETH tokens, as well as claiming rewards.
  * It interacts with the ClEth token contract, the StakeHolder contract, and the FigmentEth2Depositor interface.
  * The contract is upgradeable and implements the ReentrancyGuardUpgradeable to prevent reentrancy attacks.
  */
-import "hardhat/console.sol";
 
 contract StakingMaster is
     Initializable,
     ReentrancyGuardUpgradeable,
     StakingMasterStorage,
-    Events
+    Events,Modifiers
 {
     using Math for uint256;
 
@@ -47,14 +46,7 @@ contract StakingMaster is
     constructor() {
         _disableInitializers();
     }
-    modifier ZeroAddress(address account) {
-        require(account != address(0), "Address can not be zero");
-        _;
-    }
-    modifier ZeroAmount(uint256 amount) {
-        require(amount > 0, "Amount can not be zero");
-        _;
-    }
+
     /**
      * @dev Modifier to allow only the owner to call certain functions.
      */

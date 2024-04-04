@@ -20,8 +20,8 @@ const {
   signaturesBytes,
   depositDataRootsBytes
 } = require("./constants");
-async function sendETH(address, signer,amount) {
-  let amountToSend = parseEther(amount); 
+async function sendETH(address, signer, amount) {
+  let amountToSend = parseEther(amount);
   let tx = {
     to: address,
     value: amountToSend,
@@ -38,9 +38,9 @@ describe("StakingMaster Contract", function () {
   let wclETH
   before(async () => {
     [signer, user] = await ethers.getSigners();
-    clETH =  await deployProxy("CLETH",signer,"TokenProxy")
-    wclETH = await deployProxy("wclETH",signer,"TokenProxy")
-    stakingMasterProxy = await deployProxy("StakingMaster",signer,"DexProxy")
+    clETH = await deployProxy("CLETH", signer, "TokenProxy")
+    wclETH = await deployProxy("wclETH", signer, "TokenProxy")
+    stakingMasterProxy = await deployProxy("StakingMaster", signer, "DexProxy")
     // hre.tracer.nameTags[proxy.address] = "PROXY_MSC_!";
     hre.tracer.nameTags[clETH.address] = "CLETH_!";
     hre.tracer.nameTags[user.address] = "USER_!";
@@ -50,24 +50,22 @@ describe("StakingMaster Contract", function () {
 
   describe("Smart contract function test", async () => {
     it("Init clETH contract", async () => {
-      await clETH.initialize(signer.address,stakingMasterProxy.address);
+      await clETH.initialize(signer.address, stakingMasterProxy.address);
     })
     it("Init clETH contract", async () => {
       await wclETH.initialize("wclETH", "Wcleth");
     })
 
     it("Init to staking Master contract should be reverted as  we are passing zero address", async () => {
-      expect (stakingMasterProxy.setUp(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
+      expect(stakingMasterProxy.setUp(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
     })
     it("Init to staking Master contract should be reverted as  we are passing zero address", async () => {
-        expect (stakingMasterProxy.setUp(signer.address, ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
-      })
-      it("Init to staking Master contract", async () => {
-        await stakingMasterProxy.setUp(clETH.address, signer.address)
-      })
-    // it("Greant role to staking master", async () => {
-    //   await clETH.grantRoles(stakingMasterProxy.address)
-    // })
+      expect(stakingMasterProxy.setUp(signer.address, ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
+    })
+    it("Init to staking Master contract", async () => {
+      await stakingMasterProxy.setUp(clETH.address, signer.address)
+    })
+
     it("stake  32 ETH to staking master contract", async () => {
       await stakingMasterProxy.connect(user).stake({ value: DEPOSIT_AMOUNT })
     })
@@ -83,7 +81,7 @@ describe("StakingMaster Contract", function () {
   describe("Rewards functions testing", async () => {
     it("sending 0.04 ETH for Rewards to ISC", async () => {
       const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
-      await sendETH(userIscAddress, signer,'0.04')
+      await sendETH(userIscAddress, signer, '0.04')
     })
 
     it("Claim Cleth as a Rewards for the User", async () => {
@@ -92,28 +90,32 @@ describe("StakingMaster Contract", function () {
       expect(result).to.be.equal("32020000000000000000")
     })
     it("Claim Cleth as a Rewards for the User should be reverted as the account is zero address", async () => {
-       expect(stakingMasterProxy.connect(signer).claimRewardForCleth(ethers.constants.AddressZero, REWARDS_AMOUNT)).to.be.revertedWith("Address can not be zero")
+      expect(stakingMasterProxy.connect(signer).claimRewardForCleth(ethers.constants.AddressZero, REWARDS_AMOUNT)).to.be.revertedWith("Address can not be zero")
 
     })
     it("Claim Cleth as a Rewards for the User should be reverted as the account has never staked or nor created any Validator", async () => {
       expect(stakingMasterProxy.connect(signer).claimRewardForCleth(signer.address, REWARDS_AMOUNT)).to.be.revertedWith("Invalid Account")
 
-   })
+    })
     it("Claim Cleth as a Rewards for the User should be reverted as the amount is zero", async () => {
       expect(stakingMasterProxy.connect(signer).claimRewardForCleth(user.address, parseEther("0"))).to.be.revertedWith("amount can not be zero")
 
-   })
-   it("Claim Cleth as a Rewards for the User should be reverted as the amount as singer never staked for Wcleth", async () => {
-    expect(stakingMasterProxy.connect(signer).claimRewardForWcleth(signer.address, parseEther("10"))).to.be.revertedWith("clETHMintTo can not be null")
- })
-   it("Claim wCleth as a Rewards for the User should be reverted as the amount is zero", async () => {
-    expect(stakingMasterProxy.connect(signer).claimRewardForWcleth(user.address, parseEther("0"))).to.be.revertedWith("amount can not be zero")
+    })
+    it("Claim Cleth as a Rewards for the User should be reverted as caller is not owner", async () => {
+      expect(stakingMasterProxy.connect(user).claimRewardForCleth(user.address, parseEther("10"))).to.be.reverted
 
- })
+    })
+    it("Claim Cleth as a Rewards for the User should be reverted as the amount as singer never staked for Wcleth", async () => {
+      expect(stakingMasterProxy.connect(signer).claimRewardForWcleth(signer.address, parseEther("10"))).to.be.revertedWith("clETHMintTo can not be null")
+    })
+    it("Claim wCleth as a Rewards for the User should be reverted as the amount is zero", async () => {
+      expect(stakingMasterProxy.connect(signer).claimRewardForWcleth(user.address, parseEther("0"))).to.be.revertedWith("amount can not be zero")
+
+    })
     it("Claim wCleth as a Rewards for the User should be reverted as the account is zero address", async () => {
       expect(stakingMasterProxy.connect(signer).claimRewardForWcleth(ethers.constants.AddressZero, REWARDS_AMOUNT)).to.be.revertedWith("Address can not be zero")
 
-   })
+    })
     it(" Claim wCleth as a Rewards for the User", async () => {
       await stakingMasterProxy.claimRewardForWcleth(user.address, REWARDS_AMOUNT)
       const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
@@ -123,14 +125,14 @@ describe("StakingMaster Contract", function () {
     })
     it("Sending ISC ETH to User to check edge case", async () => {
       userISC = await ethers.getContractAt("StakeHolder", USERISC)
-     await userISC.connect(signer).sendEth(user.address, DEPOSIT_AMOUNT)
-    })   
+      await userISC.connect(signer).sendEth(user.address, DEPOSIT_AMOUNT)
+    })
     it("Claim clETH rewards for users should be reverted as the rewards are not created yet", async () => {
-       expect(stakingMasterProxy.connect(signer).claimRewardForCleth(user.address, REWARDS_AMOUNT)).to.be.revertedWith("Insufficient Rewards to claim")
+      expect(stakingMasterProxy.connect(signer).claimRewardForCleth(user.address, REWARDS_AMOUNT)).to.be.revertedWith("Insufficient Rewards to claim")
     })
     it("Sending 32 ETH to ISC as our edge case for the Rewards has been tested", async () => {
       const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
-      await sendETH(userIscAddress, signer,"32")
+      await sendETH(userIscAddress, signer, "32")
     })
     it(`claimRewardForWcleth Should be reverted with ${ONLY_OWNER_CAN_CALL}`, async () => {
       const ONLY_OWNER_CAN_CALL = "Only the owner can call this function"
@@ -157,8 +159,8 @@ describe("StakingMaster Contract", function () {
     it(`While Request unstaking it Should be rejected with error ${NOT_ENOUGH_STAKED_ETH}  as we Transfered Cleth to Another User`, async () => {
       expect(stakingMasterProxy.connect(user).unstake(DEPOSIT_AMOUNT)).to.be.revertedWith("Not enough clETH")
     })
-    it(`While Request unstaking it Should be rejected with error Amount can not be zero as we are sending 0 unstaking amount`, async () => {
-      expect(stakingMasterProxy.connect(user).unstake(parseEther("0"))).to.be.revertedWith("Amount can not be zero")
+    it(`While Request unstaking it Should be rejected with error Amount cannot be zero as we are sending 0 unstaking amount`, async () => {
+      expect(stakingMasterProxy.connect(user).unstake(parseEther("0"))).to.be.revertedWith("Amount cannot be zero")
     })
     it("Transfer User cleth To user account from another account as we are done with Edge case ", async () => {
       await clETH.connect(signer).transfer(user.address, DEPOSIT_AMOUNT)
@@ -192,7 +194,7 @@ describe("StakingMaster Contract", function () {
     it(`set Figment validator on stakeHolder`, async () => {
       await stakingMasterProxy.setFigmentDepositor(signer.address)
     })
-    
+
     it(`set Figment validator on stakeHolder should  be reverted as the figment  address is zero `, async () => {
       expect(stakingMasterProxy.setFigmentDepositor(ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
     })
@@ -220,23 +222,30 @@ describe("StakingMaster Contract", function () {
       expect(stakingMasterProxy.connect(signer).updateWithdrawalStatus(user.address, DEPOSIT_AMOUNT + REWARDS_AMOUNT)).to.be.revertedWith("Not enough staked ETH")
     })
     it("Update User withdarawal status should be reverted as the amount is zero", async () => {
-      expect(stakingMasterProxy.connect(signer).updateWithdrawalStatus(signer.address, 0)).to.be.revertedWith("Amount can not be zero")
+      expect(stakingMasterProxy.connect(signer).updateWithdrawalStatus(signer.address, 0)).to.be.revertedWith("Amount cannot be zero")
+    })
+    it("Update User withdarawal status should be reverted as caller is not owner", async () => {
+      expect(stakingMasterProxy.connect(user).updateWithdrawalStatus(signer.address, DEPOSIT_AMOUNT)).to.be.reverted
     })
     it("send ETH to user for testing rewards", async () => {
       userISC = await ethers.getContractAt("StakeHolder", USERISC)
-     await userISC.connect(signer).sendEth(user.address, DEPOSIT_AMOUNT)
-    })   
-     it("claim user's fund and it should be reverted user is withdrawaing amoun that is not in peresent in ISC as of now", async () => {
+      await userISC.connect(signer).sendEth(user.address, DEPOSIT_AMOUNT)
+    })
+    it("claim user's fund and it should be reverted user is withdrawaing amoun that is not in peresent in ISC as of now", async () => {
       expect(stakingMasterProxy.connect(signer).burnCleth(user.address, DEPOSIT_AMOUNT)).to.be.revertedWith("Invalid withdrawal amount")
     })
 
     it("claim user's fund", async () => {
-     await sendETH(USERISC,signer,'0.1')
+      await sendETH(USERISC, signer, '0.1')
       expect(stakingMasterProxy.connect(signer).burnCleth(user.address, DEPOSIT_AMOUNT)).to.be.emit("UnstakedDone")
+    })
+    it("change staking master owner should be reverted as the caller is owner", async () => {
+      expect(stakingMasterProxy.connect(user).changeOwner(user.address)).to.be.reverted
     })
     it("change staking master owner", async () => {
       expect(stakingMasterProxy.connect(signer).changeOwner(user.address)).to.be.emit("OwnerUpdated")
     })
+
     it("change staking master owner should be reverted as the caller is not onwer", async () => {
       expect(stakingMasterProxy.connect(signer).changeOwner(user.address)).to.be.revertedWith("Only the owner can call this function")
     })
@@ -246,6 +255,7 @@ describe("StakingMaster Contract", function () {
     it("change staking master owner", async () => {
       expect(stakingMasterProxy.connect(user).changeOwner(signer.address)).to.be.emit("OwnerUpdated")
     })
+
     it("mint wclETH for user", async () => {
       await wclETH.connect(signer).mint(user.address, DEPOSIT_AMOUNT);
     })
@@ -275,7 +285,7 @@ describe("StakingMaster Contract", function () {
       await wclETH.connect(signer).unpause(
       )
     })
-  
+
   })
   describe("STAKING HOLDER TEST", async () => {
     it("Load contract ISC", async () => {
@@ -299,10 +309,14 @@ describe("StakingMaster Contract", function () {
         ethers.constants.AddressZero
       )).to.be.revertedWith("_figmentDepositor is zero address")
     })
+    it("should reverted as the caller is not owner", async () => {
+      expect(userISC.connect(user).setFigmentDepositor(signer.address
+      )).to.be.reverted
+    })
     it("call setFigmentDepositor", async () => {
-     expect( userISC.connect(signer).setFigmentDepositor(signer.address
-        )).to.be.emit("UpdateFigmentDepositAddress")
-      })
+      expect(userISC.connect(signer).setFigmentDepositor(signer.address
+      )).to.be.emit("UpdateFigmentDepositAddress")
+    })
     it("Deposit to figment from isc should be reverted as the figment address is null", async () => {
       expect(userISC.connect(signer).depositToFigment(
         pubkeysBytes,
@@ -320,4 +334,5 @@ describe("StakingMaster Contract", function () {
       )).to.be.revertedWith("Caller is not the master owner")
     })
   })
+
 })
