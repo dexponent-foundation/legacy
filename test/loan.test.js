@@ -3,7 +3,6 @@ const { parseEther, parseUnits } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const { deployProxy, deployContract } = require("./utils");
-const Sinon = require("sinon");
 const { ZERO_ADDRESS_ERROR } = require("./constants");
 
 describe("Testing loan smart contract functions", function () {
