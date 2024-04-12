@@ -17,9 +17,7 @@ contract StakeHolder is Events {
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
-    event FundsSent(address indexed to, uint256 amount);
-    event ClethReceived(address indexed from, uint256 amount);
-
+    
     /**
      * @dev Constructor to initialize the StakeHolder contract.
      * @param _staker The address of the staker.
@@ -127,16 +125,5 @@ contract StakeHolder is Events {
         figmentDepositor = _figmentDepositor;
     }
 
-    /**
-     * @dev Sends Ether to a specified recipient.
-     * This function is only for testing purposes.
-     * @param recipient The address to send Ether to.
-     * @param amount The amount of Ether to send.
-     */
-    function sendEth(
-        address payable recipient,
-        uint256 amount
-    ) external payable {
-        recipient.transfer(amount);
-    }
+   
 }

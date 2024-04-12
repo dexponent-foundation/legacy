@@ -6,7 +6,7 @@ const { deployProxy, deployContract } = require("./utils");
 const { ZERO_ADDRESS_ERROR } = require("./constants");
 
 describe("Testing loan smart contract functions", function () {
-  let signer, user, testuser;
+  let signer, user, testuser,recoveryAddress;
   let clETH;
   let loanLogicContract;
   let usdcContract
@@ -15,6 +15,7 @@ describe("Testing loan smart contract functions", function () {
   const initialPrice = parseEther("10")
   before(async () => {
     [signer, user] = await ethers.getSigners();
+    
     const usdcToken = await ethers.getContractFactory("USDC", signer);
     usdcContract = await usdcToken.deploy()
     clETH = await deployProxy("CLETH", signer, "TokenProxy")
@@ -26,11 +27,17 @@ describe("Testing loan smart contract functions", function () {
     hre.tracer.nameTags[user.address] = "USER_!";
     hre.tracer.nameTags[signer.address] = "OWNER_!";
     hre.tracer.nameTags[NULL_ADDRESS] = "NULL_ADDRESS_!";
+   
+    
+
+
+
   });
   describe("Smart contract function test", async () => {
     it("Init clETH contract", async () => {
       await clETH.initialize(signer.address, signer.address);
     })
+    
     it("should initialize the contract with correct initial values", async function () {
       const clethTokenAddress = clETH.address // Example cLETH token address
       const priceFeedAddress = priceFeed.address; // Example price feed address
@@ -56,6 +63,7 @@ describe("Testing loan smart contract functions", function () {
       const clethTokenAddress = clETH.address // Example cLETH token address
       const priceFeedAddress = priceFeed.address; // Example price feed address
       await loanLogicContract.initialize(usdcTokenAddress, clethTokenAddress, priceFeedAddress);
+    
 
       // Check contract state
       expect(await loanLogicContract.usdcToken()).to.equal(usdcTokenAddress);
@@ -63,21 +71,13 @@ describe("Testing loan smart contract functions", function () {
       expect(await loanLogicContract.priceFeed()).to.equal(priceFeedAddress);
       expect(await loanLogicContract.totalLoans()).to.equal(0);
       expect(await loanLogicContract.nextLoanId()).to.equal(1);
-      expect(await loanLogicContract.interestRateTargetUtilization()).to.equal(70);
-      expect(await loanLogicContract.interestRateK()).to.equal(1);
-      expect(await loanLogicContract.ltvTargetUtilization()).to.equal(80);
-      expect(await loanLogicContract.ltvK()).to.equal(1);
-      expect(await loanLogicContract.liquidationThreshold()).to.equal(90);
+    
     });
+  
     it("should calculate the interest rate", async () => {
       await loanLogicContract.calculateInterestRate();
     })
-    it("should calculate the maximum loan-to-value ratio", async () => {
-      await loanLogicContract.calculateMaxLTV();
-    })
-    it("should set the cleth price on the price feed", async () => {
-      await priceFeed.setLatestPrice(parseEther("10"))
-    })
+    
   })
   describe("Testing loan flow ", async () => {
 
@@ -90,6 +90,7 @@ describe("Testing loan smart contract functions", function () {
       await usdcContract.connect(signer).approve(loanLogicContract.address, parseEther("10000000"))
       await usdcContract.connect(user).approve(loanLogicContract.address, parseEther("10000000"))
     })
+
     it("should approve USDC tokens for the loan contract", async () => {
       await clETH.connect(user).approve(loanLogicContract.address, parseEther("10000000"))
     })
@@ -106,6 +107,19 @@ describe("Testing loan smart contract functions", function () {
 
       expect(loanLogicContract.connect(user).depositUSDCToReserve(parseEther("10"))).to.be.reverted
     })
+    it("should calculate the interest rate", async () => {
+      await loanLogicContract.calculateInterestRate();
+    })
+    it("should calculate the maximum loan-to-value ratio", async () => {
+      await loanLogicContract.calculateMaxLTV();
+    })
+    it("should set the cleth price on the price feed", async () => {
+
+     const newPrice = parseEther("10");  // Setting the price
+    const currentTime = (await ethers.provider.getBlock('latest')).timestamp; // Fetching the current block timestamp
+    await priceFeed.setLatestPrice(newPrice, currentTime);
+    })
+    
     it("should fetch the cleth price from the price feed and check if it's 10", async () => {
       const clethPrice = await loanLogicContract.fetchCLETHPrice();
       expect(clethPrice).to.equal(parseEther("10"));
@@ -170,7 +184,9 @@ describe("Testing loan smart contract functions", function () {
       await loanLogicContract.getClethReservedBalance();
     })
     it("should set the cLETH price on the price feed", async () => {
-      await priceFeed.setLatestPrice(parseEther("100"))
+     const newPrice = parseEther("100");  // Setting the price
+    const currentTime = (await ethers.provider.getBlock('latest')).timestamp; // Fetching the current block timestamp
+    await priceFeed.setLatestPrice(newPrice, currentTime);
     })
     it("should create a loan for the user with 80 cLETH", async () => {
       expect(loanLogicContract.connect(user).createLoan(parseEther("80"))).to.be.emit("LoanCreated");
@@ -185,12 +201,17 @@ describe("Testing loan smart contract functions", function () {
       expect(loanLogicContract.connect(user).createLoan(parseEther("0"))).to.be.revertedWith("Amount can  not be zero");
     })
     it("should set the cLETH price on the price feed", async () => {
-      await priceFeed.setLatestPrice(parseEther("1"))
+     
+     const newPrice = parseEther("1");  // Setting the price
+    const currentTime = (await ethers.provider.getBlock('latest')).timestamp; // Fetching the current block timestamp
+    await priceFeed.setLatestPrice(newPrice, currentTime); // Setting the latest price along with the current timestamp
     })
     it("should get the version of the price feed", async () => {
       await priceFeed.version()
     })
     it("should liquidate collateral for a loan id 3", async () => {
+      await loanLogicContract.connect(signer).setRecoveryAddress(signer.address);
+
       await loanLogicContract.connect(user).liquidateCollateral("3")
     })
     it("should revert liquidating collateral when the loan is already repaid or liquidated", async () => {
@@ -214,5 +235,87 @@ describe("Testing loan smart contract functions", function () {
     it("should call the description function of the price feed", async () => {
       await priceFeed.connect(user).description()
     })
+    it("should not allow creating a loan when paused", async function () {
+      await loanLogicContract.pause();
+      await expect(
+          loanLogicContract.connect(user).createLoan(parseEther("10"))
+      ).to.be.revertedWith("EnforcedPause");
+
+      await loanLogicContract.unpause();
+  });
+  it("should allow creating a loan when unpaused", async function () {
+    const newPrice = parseEther("10");
+    const currentTime = (await ethers.provider.getBlock('latest')).timestamp;
+    await priceFeed.setLatestPrice(newPrice, currentTime);
+
+    await expect(
+        loanLogicContract.connect(user).createLoan(parseEther("10"))
+    ).to.emit(loanLogicContract, "LoanCreated");
+});
+it("Confirm that setting a zero address fails", async function () {
+  await expect(loanLogicContract.setRecoveryAddress(ethers.constants.AddressZero))
+    .to.be.revertedWith("Invalid address");  
+});
+it("Check that a non-owner cannot set the recovery address", async function () {
+  await expect(loanLogicContract.connect(user).setRecoveryAddress(user.address))
+    .to.be.revertedWith("OwnableUnauthorizedAccount");  // Assuming using OpenZeppelin's Ownable
+});
+it("Check if the fetched price is outdated", async function () {
+  // Simulate outdated price data
+  const oldTimestamp = (await ethers.provider.getBlock('latest')).timestamp - 3600; // 1 hour old
+  await priceFeed.setLatestPrice(ethers.utils.parseEther("1.5"), oldTimestamp);
+
+  // Fetch the price using the loan logic contract
+  await expect(loanLogicContract.fetchCLETHPrice()).to.be.revertedWith("Price data is too old");
+});
+it("should pause the contract and prevent state changes", async function () {
+  await loanLogicContract.pause();
+  await expect(loanLogicContract.connect(user).createLoan(parseEther("10"))).to.be.revertedWith("EnforcedPause");
+});
+
+
+it("should unpause the contract and allow state changes", async function() {
+  await loanLogicContract.unpause();
+  const newPrice = parseEther("1");  // Setting the price
+    const currentTime = (await ethers.provider.getBlock('latest')).timestamp; // Fetching the current block timestamp
+    await priceFeed.setLatestPrice(newPrice, currentTime);
+  await expect(loanLogicContract.connect(user).createLoan(parseEther("10")))
+      .to.emit(loanLogicContract, "LoanCreated");
+});
+
+
+it("should fail to create a loan when price data is outdated during operation", async function () {
+  const outdatedTime = (await ethers.provider.getBlock('latest')).timestamp - 10000;
+  await priceFeed.setLatestPrice(parseEther("1"), outdatedTime);
+  await expect(loanLogicContract.connect(user).createLoan(parseEther("5")))
+    .to.be.revertedWith("Price data is too old");
+});
+it("ensures no operations possible when paused", async function() {
+  await loanLogicContract.pause();
+  await expect(loanLogicContract.connect(user).createLoan(parseEther("5")))
+    .to.be.revertedWith("EnforcedPause");
+  await expect(loanLogicContract.connect(user).repayLoan(1))
+    .to.be.revertedWith("EnforcedPause");
+  await expect(loanLogicContract.connect(user).liquidateCollateral(1))
+    .to.be.revertedWith("EnforcedPause");
+});
+it("should handle rapid sequential operations correctly", async function() {
+  await loanLogicContract.unpause();
+  const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
+  await priceFeed.setLatestPrice(ethers.utils.parseEther("1.2"), currentTimestamp);
+  await loanLogicContract.connect(user).createLoan(parseEther("5"));
+  await loanLogicContract.connect(user).repayLoan(4);
+  await expect(loanLogicContract.connect(user).createLoan(parseEther("10")))
+    .to.emit(loanLogicContract, "LoanCreated");
+  await expect(loanLogicContract.connect(user).repayLoan(5))
+    .to.emit(loanLogicContract, "LoanRepaid");
+});
+it("should prevent non-owners from pausing or unpausing the contract", async function () {
+  await expect(loanLogicContract.connect(user).pause()).to.be.revertedWith("OwnableUnauthorizedAccount");
+  await expect(loanLogicContract.connect(user).unpause()).to.be.revertedWith("OwnableUnauthorizedAccount");
+});
+
+
+
   })
 })

@@ -7,13 +7,13 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import "./LoanStorage.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./modifier/modifier.sol";
-
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 /**
  * @title LoanLogic
  * @dev The main contract handling loan creation, repayment, collateral liquidation, and interest rate calculation.
  */
 
-contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
+contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers,PausableUpgradeable {
     using SafeERC20 for IERC20;
     using Math for uint256;
     event CollateralLiquidated(
@@ -60,28 +60,40 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
         priceFeed = AggregatorV3Interface(_priceFeedAddress);
         totalLoans = 0;
         nextLoanId = 1;
-        interestRateTargetUtilization = 70;
-        interestRateK = 1;
-        ltvTargetUtilization = 80;
-        ltvK = 1;
-        liquidationThreshold = 90;
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
+        __Pausable_init();
     }
 
     /**
      * @dev Fetches the current cLETH price from the oracle without updating the contract state.
      * @return The current cLETH price.
      */ function fetchCLETHPrice() public view returns (uint256) {
-        (
-            ,
-            /*uint80 roundID*/ int price,
-            ,
-            /*uint startedAt*/ uint256 timeStamp /*uint80 answeredInRound*/,
+    (
+        /* uint80 roundID */,
+        int price,
+        /* uint startedAt */,
+        uint256 timeStamp,
+        /* uint80 answeredInRound */
+    ) = priceFeed.latestRoundData();
 
-        ) = priceFeed.latestRoundData();
+   
+    require(block.timestamp - timeStamp < 10 minutes, "Price data is too old");
 
-        return uint256(price);
+    return uint256(price);
+}
+
+    function setRecoveryAddress(address _recoveryAddress) public onlyOwner {
+        require(_recoveryAddress != address(0), "Invalid address");
+        recoveryAddress = _recoveryAddress;
+    }
+
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 
     /**
@@ -90,7 +102,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
      */
     function depositUSDCToReserve(
         uint256 amount
-    ) public ZeroAmount(amount) onlyOwner {
+    ) public  ZeroAmount(amount)  whenNotPaused onlyOwner {
         transferTokensFrom(usdcToken, msg.sender, amount);
         totalUSDCReserve += amount;
         totalfund += totalUSDCReserve;
@@ -128,8 +140,9 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
     function calculateMaxLTV() public view returns (uint256) {
         uint256 baseLTV = 70;
 
+        
         uint256 currentUtilization = ((totalLoans / 1e18) * 100) /
-            ((totalfund > 0 ? (totalfund / 1e18) : 1));
+            (totalfund / 1e18);
         if (currentUtilization < ltvTargetUtilization) {
             return baseLTV;
         }
@@ -157,7 +170,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
      */
     function createLoan(
         uint256 clethAmount
-    ) public ZeroAmount(clethAmount) nonReentrant {
+    ) public ZeroAmount(clethAmount) nonReentrant whenNotPaused{
         uint256 maxLoanAmount = calculateMaxLoanAmount(clethAmount);
 
         require(maxLoanAmount <= totalfund, "Insufficient liquidity");
@@ -193,7 +206,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
      */
     function repayLoan(
         uint256 loanId
-    ) public LoanIdNotExits(loanId) nonReentrant {
+    ) public LoanIdNotExits(loanId) nonReentrant whenNotPaused{
         Loan storage loan = loans[loanId];
         require(!loan.isRepaid, "Loan already repaid");
         require(
@@ -246,18 +259,16 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
 
     function liquidateCollateral(
         uint256 loanId
-    ) public LoanIdNotExits(loanId) nonReentrant {
+    ) public LoanIdNotExits(loanId) nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
         require(!loan.isRepaid, "Loan is already repaid or liquidated");
         uint256 currentPrice = fetchCLETHPrice();
-
         uint256 loanValueInCLETH = loan.debt / currentPrice;
         uint256 currentLTV = calculateMaxLoanAmount(loanValueInCLETH);
-        require(
-            currentLTV > liquidationThreshold,
-            "Loan LTV is below liquidation threshold"
-        );
-        transferTokens(clethToken, address(this), loan.collateralAmount);
+        require(currentLTV > liquidationThreshold, "Loan LTV is below liquidation threshold");
+
+        // Transfer collateral to the recovery address instead of the contract itself
+        require(clethToken.transfer(recoveryAddress, loan.collateralAmount), "Transfer failed");
 
         loan.isRepaid = true;
         loan.debt = 0;
@@ -288,7 +299,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers {
     ) internal {
         require(
             token.transferFrom(from, address(this), amount),
-            "trensfer from failed"
+            "transfer from failed"
         );
     }
 }
