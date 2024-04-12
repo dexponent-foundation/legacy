@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "../interfaces/IFigmentEth2Depositor.sol"; // Import the interface
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./events/Event.sol";
+import "../interfaces/IssvContract.sol";
 
 /**
  * @title StakeHolder
@@ -14,6 +15,7 @@ contract StakeHolder is Events {
     address public staker;
     address public masterContractOwner;
     address public masterContract;
+    address ssvNetwork;
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
@@ -33,14 +35,15 @@ contract StakeHolder is Events {
         address _masterContract,
         address _masterContractOwner,
         IFigmentEth2Depositor _figmentDepositor,
-        IERC20 _clethToken
+        IERC20 _clethToken,
+        address _ssvNetwork
     ) payable {
         staker = _staker;
         masterContractOwner = _masterContractOwner;
         masterContract = _masterContract;
         figmentDepositor = _figmentDepositor;
         clethToken = _clethToken;
-        _clethToken.approve(_masterContract, type(uint256).max);
+        ssvNetwork = _ssvNetwork;
         emit DepositReceived(_staker, msg.value);
     }
 
@@ -125,6 +128,57 @@ contract StakeHolder is Events {
             address(_figmentDepositor)
         );
         figmentDepositor = _figmentDepositor;
+    }
+
+    //  ssv validator
+    function registerValidatorOnSsv(
+        bytes calldata publicKey,
+        uint64[] memory operatorIds,
+        bytes calldata sharesData,
+        uint256 amount,
+        ISSVClusters.Cluster memory cluster
+    ) external onlyMasterOwner {
+        require(publicKey.length > 0, "Public key must not be empty");
+        require(operatorIds.length > 0, "Operator IDs must not be empty");
+        require(bytes(sharesData).length > 0, "Shares data must not be empty");
+        require(amount > 0, "Amount must be greater than zero");
+        ISSVClusters(ssvNetwork).registerValidator(
+            publicKey,
+            operatorIds,
+            sharesData,
+            amount,
+            cluster
+        );
+    }
+
+    function depositSsvTokenIntoCluster(
+        uint64[] memory operatorIds,
+        uint256 amount,
+        ISSVClusters.Cluster memory cluster
+    ) external {
+        require(
+            operatorIds.length > 0,
+            "At least one operator ID must be provided"
+        );
+        require(amount > 0, "Amount must be greater than zero");
+        ISSVClusters(ssvNetwork).deposit(
+            address(this),
+            operatorIds,
+            amount,
+            cluster
+        );
+    }
+
+    function exitValidatorOnssV(
+        bytes calldata publicKey,
+        uint64[] calldata operatorIds
+    ) external onlyMasterOwner {
+        require(publicKey.length > 0, "Public key must not be empty");
+        require(
+            operatorIds.length > 0,
+            "At least one operator ID must be provided"
+        );
+        ISSVClusters(ssvNetwork).exitValidator(publicKey, operatorIds);
     }
 
     /**

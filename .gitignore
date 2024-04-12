@@ -7,3 +7,5 @@ yarn-error.log
 .vscode
 coverage
 coverage.json
+.coverage
+.storage-layouts
