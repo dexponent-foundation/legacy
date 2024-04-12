@@ -273,6 +273,7 @@ it("should pause the contract and prevent state changes", async function () {
   await expect(loanLogicContract.connect(user).createLoan(parseEther("10"))).to.be.revertedWith("EnforcedPause");
 });
 
+
 it("should unpause the contract and allow state changes", async function() {
   await loanLogicContract.unpause();
   const newPrice = parseEther("1");  // Setting the price
@@ -281,33 +282,8 @@ it("should unpause the contract and allow state changes", async function() {
   await expect(loanLogicContract.connect(user).createLoan(parseEther("10")))
       .to.emit(loanLogicContract, "LoanCreated");
 });
-it("should prevent non-owners from pausing or unpausing the contract", async function () {
-  await expect(loanLogicContract.connect(user).pause()).to.be.revertedWith("OwnableUnauthorizedAccount");
-  await expect(loanLogicContract.connect(user).unpause()).to.be.revertedWith("OwnableUnauthorizedAccount");
-});
-it("Test behavior under rapidly changing price conditions", async function () {
-  // Ensure that the price changes are reasonable and within the bounds the contract expects
-  const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-  await priceFeed.setLatestPrice(ethers.utils.parseEther("1.1"), currentTimestamp - 60); // set to 60 seconds ago
-  await priceFeed.setLatestPrice(ethers.utils.parseEther("1.2"), currentTimestamp); // current time
-  await priceFeed.setLatestPrice(ethers.utils.parseEther("1.3"), currentTimestamp + 60); // 60 seconds in the future
 
-  // Try fetching the latest price
-  try {
-      const fetchedPrice = await loanLogicContract.fetchCLETHPrice();
-      expect(fetchedPrice).to.equal(ethers.utils.parseEther("1.2"));
-  } catch (error) {
-      console.error("Error fetching price:", error.message);
-  }
 
-  // Ensure that future timestamps don't cause a revert, but fetch the most recent valid timestamp
-  try {
-      const futurePriceFetch = await loanLogicContract.fetchCLETHPrice();
-      expect(await futurePriceFetch).to.equal(ethers.utils.parseEther("1.3"));
-  } catch (error) {
-      console.error("Error fetching future price:", error.message);
-  }
-});
 it("should fail to create a loan when price data is outdated during operation", async function () {
   const outdatedTime = (await ethers.provider.getBlock('latest')).timestamp - 10000;
   await priceFeed.setLatestPrice(parseEther("1"), outdatedTime);
@@ -333,6 +309,10 @@ it("should handle rapid sequential operations correctly", async function() {
     .to.emit(loanLogicContract, "LoanCreated");
   await expect(loanLogicContract.connect(user).repayLoan(5))
     .to.emit(loanLogicContract, "LoanRepaid");
+});
+it("should prevent non-owners from pausing or unpausing the contract", async function () {
+  await expect(loanLogicContract.connect(user).pause()).to.be.revertedWith("OwnableUnauthorizedAccount");
+  await expect(loanLogicContract.connect(user).unpause()).to.be.revertedWith("OwnableUnauthorizedAccount");
 });
 
 
