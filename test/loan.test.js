@@ -27,7 +27,7 @@ describe("Testing loan smart contract functions", function () {
     hre.tracer.nameTags[user.address] = "USER_!";
     hre.tracer.nameTags[signer.address] = "OWNER_!";
     hre.tracer.nameTags[NULL_ADDRESS] = "NULL_ADDRESS_!";
-    console.log("Current owner: ", await loanLogicContract.owner());
+   
     
 
 
