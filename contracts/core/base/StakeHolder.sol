@@ -17,9 +17,7 @@ contract StakeHolder is Events {
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
-    event FundsSent(address indexed to, uint256 amount);
-    event ClethReceived(address indexed from, uint256 amount);
-
+    
     /**
      * @dev Constructor to initialize the StakeHolder contract.
      * @param _staker The address of the staker.
