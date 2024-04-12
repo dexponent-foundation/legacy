@@ -77,7 +77,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers,Pausabl
         /* uint80 answeredInRound */
     ) = priceFeed.latestRoundData();
 
-    // Ensure the price is recent, e.g., updated within the last 10 minutes
+   
     require(block.timestamp - timeStamp < 10 minutes, "Price data is too old");
 
     return uint256(price);
