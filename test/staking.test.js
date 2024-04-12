@@ -77,6 +77,14 @@ describe("StakingMaster Contract", function () {
     it("This should be reverted as we are depositing 12 ETH and our min Deposit required is 32 ETH", async () => {
       expect(stakingMasterProxy.connect(user).stake({ value: WRONG_DEPOSIT_AMOUNT })).to.be.revertedWith("Must sent minimum 32 ETH")
     })
+    it("should not allow staking less than the minimum required amount", async function () {
+      await expect(stakingMasterProxy.connect(user).stake({value: ethers.utils.parseEther("0.1")}))
+        .to.be.revertedWith("Must sent minimum 32 ETH");
+    });
+    it("should not allow changing ownership to the zero address", async function () {
+      await expect(stakingMasterProxy.connect(signer).changeOwner(ethers.constants.AddressZero))
+        .to.be.revertedWith("Address cannot be zero");
+    });
   })
   describe("Rewards functions testing", async () => {
     it("sending 0.04 ETH for Rewards to ISC", async () => {
@@ -123,10 +131,8 @@ describe("StakingMaster Contract", function () {
       USERISC = userIscAddress
       expect(userClethBalance).to.be.equal(REWARDS_AMOUNT)
     })
-    it("Sending ISC ETH to User to check edge case", async () => {
-      userISC = await ethers.getContractAt("StakeHolder", USERISC)
-      await userISC.connect(signer).sendEth(user.address, DEPOSIT_AMOUNT)
-    })
+    
+    
     it("Claim clETH rewards for users should be reverted as the rewards are not created yet", async () => {
       expect(stakingMasterProxy.connect(signer).claimRewardForCleth(user.address, REWARDS_AMOUNT)).to.be.revertedWith("Insufficient Rewards to claim")
     })
@@ -226,10 +232,6 @@ describe("StakingMaster Contract", function () {
     })
     it("Update User withdarawal status should be reverted as caller is not owner", async () => {
       expect(stakingMasterProxy.connect(user).updateWithdrawalStatus(signer.address, DEPOSIT_AMOUNT)).to.be.reverted
-    })
-    it("send ETH to user for testing rewards", async () => {
-      userISC = await ethers.getContractAt("StakeHolder", USERISC)
-      await userISC.connect(signer).sendEth(user.address, DEPOSIT_AMOUNT)
     })
     it("claim user's fund and it should be reverted user is withdrawaing amoun that is not in peresent in ISC as of now", async () => {
       expect(stakingMasterProxy.connect(signer).burnCleth(user.address, DEPOSIT_AMOUNT)).to.be.revertedWith("Invalid withdrawal amount")
@@ -333,6 +335,7 @@ describe("StakingMaster Contract", function () {
         depositDataRootsBytes
       )).to.be.revertedWith("Caller is not the master owner")
     })
+    
   })
 
 })

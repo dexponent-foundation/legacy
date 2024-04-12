@@ -125,16 +125,5 @@ contract StakeHolder is Events {
         figmentDepositor = _figmentDepositor;
     }
 
-    /**
-     * @dev Sends Ether to a specified recipient.
-     * This function is only for testing purposes.
-     * @param recipient The address to send Ether to.
-     * @param amount The amount of Ether to send.
-     */
-    function sendEth(
-        address payable recipient,
-        uint256 amount
-    ) external payable {
-        recipient.transfer(amount);
-    }
+   
 }
