@@ -68,7 +68,8 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers,Pausabl
     /**
      * @dev Fetches the current cLETH price from the oracle without updating the contract state.
      * @return The current cLETH price.
-     **/function fetchCLETHPrice() public view whenNotPaused returns (uint256) {
+     **/
+     function fetchCLETHPrice() public view whenNotPaused returns (uint256) {
     (
         /* uint80 roundID */,
         int price,
