@@ -68,7 +68,7 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers,Pausabl
     /**
      * @dev Fetches the current cLETH price from the oracle without updating the contract state.
      * @return The current cLETH price.
-     */ function fetchCLETHPrice() public view returns (uint256) {
+     **/function fetchCLETHPrice() public view whenNotPaused returns (uint256) {
     (
         /* uint80 roundID */,
         int price,
@@ -77,11 +77,15 @@ contract LoanLogic is LoanStorage, ReentrancyGuardUpgradeable, Modifiers,Pausabl
         /* uint80 answeredInRound */
     ) = priceFeed.latestRoundData();
 
-   
+    // Ensure the price is not zero
+    require(price > 0, "CLETH: fetched price is zero");
+
+    // Check if the price data is recent enough
     require(block.timestamp - timeStamp < 10 minutes, "Price data is too old");
 
     return uint256(price);
 }
+
 
     function setRecoveryAddress(address _recoveryAddress) public onlyOwner {
         require(_recoveryAddress != address(0), "Invalid address");

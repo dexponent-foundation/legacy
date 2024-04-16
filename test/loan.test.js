@@ -314,6 +314,35 @@ it("should prevent non-owners from pausing or unpausing the contract", async fun
   await expect(loanLogicContract.connect(user).pause()).to.be.revertedWith("OwnableUnauthorizedAccount");
   await expect(loanLogicContract.connect(user).unpause()).to.be.revertedWith("OwnableUnauthorizedAccount");
 });
+it("should revert if the fetched price is zero", async () => {
+  const zeroPrice = parseEther("0");  // Setting the price to zero
+  const currentTime = (await ethers.provider.getBlock('latest')).timestamp; // Fetching the current block timestamp
+  await priceFeed.setLatestPrice(zeroPrice, currentTime);
+
+  // Expect the fetchCLETHPrice to revert due to zero price
+  await expect(loanLogicContract.fetchCLETHPrice()).to.be.revertedWith("CLETH: fetched price is zero");
+});
+it("should revert if the contract is paused and fetchCLETHPrice is called", async () => {
+  await loanLogicContract.pause(); // Pausing the contract
+  const validPrice = parseEther("10");  // Setting a non-zero price
+  const currentTime = (await ethers.provider.getBlock('latest')).timestamp;
+  await priceFeed.setLatestPrice(validPrice, currentTime);
+
+  // Expect the fetchCLETHPrice to revert due to the contract being paused
+  await expect(loanLogicContract.fetchCLETHPrice()).to.be.revertedWith("EnforcedPause");
+  await loanLogicContract.unpause(); 
+});
+it("should correctly fetch the price when contract is not paused and price is non-zero", async () => {
+  const validPrice = parseEther("10");  
+  const currentTime = (await ethers.provider.getBlock('latest')).timestamp;
+  await priceFeed.setLatestPrice(validPrice, currentTime);
+
+  // Fetch the price using the loan logic contract
+  const fetchedPrice = await loanLogicContract.fetchCLETHPrice();
+  expect(fetchedPrice).to.equal(validPrice);
+});
+
+
 
 
 
