@@ -33,7 +33,8 @@ contract StakingMaster is
         address _clethToken,
         address _figmentDepositor,
         address _ssvToken,
-        address _ssvNetowrk
+        address _ssvNetowrk,
+        address _beaconContract
     )
         public
         virtual
@@ -45,6 +46,7 @@ contract StakingMaster is
         owner = msg.sender;
         ssvToken = _ssvToken;
         ssvNetwork = _ssvNetowrk;
+        beaconContract = _beaconContract;
         figmentDepositor = IFigmentEth2Depositor(_figmentDepositor);
         __ReentrancyGuard_init();
     }
@@ -107,7 +109,8 @@ contract StakingMaster is
                 owner,
                 figmentDepositor,
                 clETH,
-                ssvNetwork
+                ssvNetwork,
+                beaconContract
             );
 
             StakeHolders[msg.sender] = stakeHolder;
@@ -115,6 +118,7 @@ contract StakingMaster is
             (bool success, ) = address(stakeHolder).call{value: msg.value}("");
             require(success, "Failed to send ETH to StakeHolder");
         }
+        IERC20(ssvToken).transfer(address(stakeHolder), ssvTokenAmount);
         StakedBalance[msg.sender] += msg.value;
         totalPoolStake += msg.value;
         return stakeHolder;

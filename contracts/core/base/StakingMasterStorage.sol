@@ -20,6 +20,7 @@ abstract contract StakingMasterStorage {
     IFigmentEth2Depositor public figmentDepositor; // The Figment Eth2 Depositor contract
     address public owner; // The owner address of the contract
     address ssvNetwork;
+    address beaconContract;
     address ssvToken;
     uint256 public totalPoolStake; // Total pool stake accumulated
     uint256 ssvTokenAmount;

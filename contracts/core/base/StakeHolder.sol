@@ -5,7 +5,7 @@ import "../interfaces/IFigmentEth2Depositor.sol"; // Import the interface
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./events/Event.sol";
 import "../interfaces/IssvContract.sol";
-
+import "../interfaces/IBeacon.sol";
 /**
  * @title StakeHolder
  * @dev The StakeHolder contract represents a stakeholder in the staking system.
@@ -16,6 +16,7 @@ contract StakeHolder is Events {
     address public masterContractOwner;
     address public masterContract;
     address ssvNetwork;
+    address  beaconContract;
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
@@ -36,7 +37,8 @@ contract StakeHolder is Events {
         address _masterContractOwner,
         IFigmentEth2Depositor _figmentDepositor,
         IERC20 _clethToken,
-        address _ssvNetwork
+        address _ssvNetwork,
+        address _beaconContract
     ) payable {
         staker = _staker;
         masterContractOwner = _masterContractOwner;
@@ -44,6 +46,7 @@ contract StakeHolder is Events {
         figmentDepositor = _figmentDepositor;
         clethToken = _clethToken;
         ssvNetwork = _ssvNetwork;
+        beaconContract = _beaconContract;
         emit DepositReceived(_staker, msg.value);
     }
 
@@ -180,17 +183,23 @@ contract StakeHolder is Events {
         );
         ISSVClusters(ssvNetwork).exitValidator(publicKey, operatorIds);
     }
-
-    /**
-     * @dev Sends Ether to a specified recipient.
-     * This function is only for testing purposes.
-     * @param recipient The address to send Ether to.
-     * @param amount The amount of Ether to send.
-     */
-    function sendEth(
-        address payable recipient,
-        uint256 amount
-    ) external payable {
-        recipient.transfer(amount);
+    // /**
+    //  * @dev Sends Ether to a specified recipient.
+    //  * This function is only for testing purposes.
+    //  * @param recipient The address to send Ether to.
+    //  * @param amount The amount of Ether to send.
+    //  */
+    // function sendEth(
+    //     address payable recipient,
+    //     uint256 amount
+    // ) external payable {
+    //     recipient.transfer(amount);
+    function depositToBeacon(  
+        bytes calldata pubkey,
+        bytes calldata withdrawal_credentials,
+        bytes calldata signature,
+        bytes32 deposit_data_root,
+        uint256 collateral) external onlyMasterOwner {
+        IDepositContract(beaconContract).deposit{value: collateral}(pubkey,withdrawal_credentials,signature,deposit_data_root);
     }
 }
