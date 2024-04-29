@@ -110,7 +110,8 @@ contract StakingMaster is
                 figmentDepositor,
                 clETH,
                 ssvNetwork,
-                beaconContract
+                beaconContract,
+                ssvToken
             );
 
             StakeHolders[msg.sender] = stakeHolder;

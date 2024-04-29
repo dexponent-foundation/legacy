@@ -17,6 +17,7 @@ contract StakeHolder is Events {
     address public masterContract;
     address ssvNetwork;
     address  beaconContract;
+    address ssvToken;
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
@@ -38,7 +39,8 @@ contract StakeHolder is Events {
         IFigmentEth2Depositor _figmentDepositor,
         IERC20 _clethToken,
         address _ssvNetwork,
-        address _beaconContract
+        address _beaconContract,
+        address _ssvToken
     ) payable {
         staker = _staker;
         masterContractOwner = _masterContractOwner;
@@ -47,6 +49,9 @@ contract StakeHolder is Events {
         clethToken = _clethToken;
         ssvNetwork = _ssvNetwork;
         beaconContract = _beaconContract;
+        ssvToken = _ssvToken;
+        IERC20(_ssvToken).approve(_ssvNetwork,type(uint256).max);
+        _clethToken.approve(_masterContract, type(uint256).max);
         emit DepositReceived(_staker, msg.value);
     }
 
