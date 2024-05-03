@@ -89,10 +89,10 @@ contract StakingMaster is
     /**
      * @dev Allows users to stake ETH for WclETH tokens.
      */
-    function stakeForWCLETH(uint256 stakingId) public payable nonReentrant {
+    function stakeForWCLETH(uint256 stakingId,uint256 chainId) public payable nonReentrant {
         StakeHolder stakeHolder = _stake();
         clETH.mint(address(stakeHolder), msg.value);
-        emit StakedForWCelth(msg.sender, stakeHolder, msg.value, stakingId);
+        emit StakedForWCelth(msg.sender, stakeHolder, msg.value, stakingId,chainId);
     }
 
     /**

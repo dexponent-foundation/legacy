@@ -27,7 +27,8 @@ contract Events {
         address indexed user,
         StakeHolder stakeHolderContract,
         uint256 amount,
-        uint256 stakingId
+        uint256 stakingId,
+        uint256 chainId
     );
     event SsvTokenAmountUpdate(uint256 oldAmount, uint256 newAmount);
 }
