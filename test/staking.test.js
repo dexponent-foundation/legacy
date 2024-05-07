@@ -462,7 +462,7 @@ const operatorIds = [1, 2, 3, 4]; // Expanded operator IDs
 });
 describe("StakeHolder Contract Initialization", function () {
   it("should automatically approve clethToken for masterContract upon initialization", async function () {
-      // Assuming deployment is done somewhere in your test setups
+      
       const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
       const stakeHolder = await ethers.getContractAt("StakeHolder", userIscAddress); // Use correct deployed address
 
@@ -477,9 +477,9 @@ describe("StakeHolder Contract Initialization", function () {
   it("should revert when trying to withdraw more than the available balance", async function () {
    const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
       const stakeHolder = await ethers.getContractAt("StakeHolder", userIscAddress);
-    const excessiveAmount = ethers.utils.parseEther("100"); // An amount greater than likely balance
+    const excessiveAmount = ethers.utils.parseEther("100"); 
     await expect(stakeHolder.withdrawETH(excessiveAmount, user.address))
-        .to.be.revertedWith("revert caller is not owner"); // Adjust the revert message based on your contract's error handling
+        .to.be.revertedWith("revert caller is not owner"); 
 });
 
    
