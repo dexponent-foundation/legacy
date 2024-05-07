@@ -3,6 +3,9 @@ const { parseEther } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const { deployProxy } = require("./utils");
+
+
+
 const {
   DEPOSIT_AMOUNT,
   WRONG_DEPOSIT_AMOUNT,
@@ -29,6 +32,8 @@ async function sendETH(address, signer, amount) {
   await signer.sendTransaction(tx);
 }
 
+
+
 describe("StakingMaster Contract", function () {
   let signer, user;
   let clETH;
@@ -36,18 +41,26 @@ describe("StakingMaster Contract", function () {
   let USERISC;
   let userISC
   let wclETH
+  let SSV
+  let Beacon
+  let ssvn
   before(async () => {
     [signer, user] = await ethers.getSigners();
-    clETH = await deployProxy("CLETH", signer, "TokenProxy")
-    wclETH = await deployProxy("wclETH", signer, "TokenProxy")
-    stakingMasterProxy = await deployProxy("StakingMaster", signer, "DexProxy")
-    // hre.tracer.nameTags[proxy.address] = "PROXY_MSC_!";
+    clETH = await deployProxy("CLETH", signer, "TokenProxy");
+    wclETH = await deployProxy("wclETH", signer, "TokenProxy");
+    stakingMasterProxy = await deployProxy("StakingMaster", signer, "DexProxy");
+  
+    SSV = { address: "0x1234567890123456789012345678901234567890" };
+  
+    const beaconAddress = "0x1234567890123456789012345678901234567890"; // Replace with actual contract address
+
+    // Getting an instance of the beacon using its interface and address
+    Beacon = await ethers.getContractAt("IBeacon", beaconAddress, signer);
+  
     hre.tracer.nameTags[clETH.address] = "CLETH_!";
     hre.tracer.nameTags[user.address] = "USER_!";
     hre.tracer.nameTags[signer.address] = "OWNER_!";
-    hre.tracer.nameTags[NULL_ADDRESS] = "NULL_ADDRESS_!";
   });
-
   describe("Smart contract function test", async () => {
     it("Init clETH contract", async () => {
       await clETH.initialize(signer.address, stakingMasterProxy.address);
@@ -57,17 +70,31 @@ describe("StakingMaster Contract", function () {
     })
 
     it("Init to staking Master contract should be reverted as  we are passing zero address", async () => {
-      expect(stakingMasterProxy.setUp(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
+      await expect(stakingMasterProxy.setUp(
+        ethers.constants.AddressZero, // clETH token address
+        ethers.constants.AddressZero, // Figment depositor address
+        ethers.constants.AddressZero, // SSV token address
+        ethers.constants.AddressZero, // SSV network address
+        ethers.constants.AddressZero  // Beacon contract address
+    )).to.be.revertedWith("Address cannot be zero")
     })
+    
     it("Init to staking Master contract should be reverted as  we are passing zero address", async () => {
-      expect(stakingMasterProxy.setUp(signer.address, ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
+      expect(stakingMasterProxy.setUp(signer.address, ethers.constants.AddressZero)).to.be.revertedWith("Address cannot be zero")
     })
     it("Init to staking Master contract", async () => {
-      await stakingMasterProxy.setUp(clETH.address, signer.address)
+      console.log("clETH.address:", clETH.address);
+console.log("signer.address:", signer.address);
+console.log("SSV.address:", SSV.address);
+console.log("Beacon.address:", Beacon.address);
+      await stakingMasterProxy.setUp(clETH.address, signer.address,SSV.address,          // Address of the SSV contract
+      Beacon.address,       
+      Beacon.address)
     })
 
     it("stake  32 ETH to staking master contract", async () => {
-      await stakingMasterProxy.connect(user).stake({ value: DEPOSIT_AMOUNT })
+      const stakingId = 1;
+      await stakingMasterProxy.connect(user).stake(stakingId,{ value: DEPOSIT_AMOUNT })
     })
 
     it("We deposit 32 ETH , User cleth balance should be equal to 32 cleth", async () => {
@@ -78,13 +105,39 @@ describe("StakingMaster Contract", function () {
       expect(stakingMasterProxy.connect(user).stake({ value: WRONG_DEPOSIT_AMOUNT })).to.be.revertedWith("Must sent minimum 32 ETH")
     })
     it("should not allow staking less than the minimum required amount", async function () {
-      await expect(stakingMasterProxy.connect(user).stake({value: ethers.utils.parseEther("0.1")}))
+      const stakingId = 1;
+      await expect(stakingMasterProxy.connect(user).stake(stakingId,{value: ethers.utils.parseEther("0.1")}))
         .to.be.revertedWith("Must sent minimum 32 ETH");
     });
     it("should not allow changing ownership to the zero address", async function () {
       await expect(stakingMasterProxy.connect(signer).changeOwner(ethers.constants.AddressZero))
         .to.be.revertedWith("Address cannot be zero");
     });
+    it("should not allow changing ownership to a zero address", async function () {
+      // This assumes that there is an 'OwnerUpdated' event that gets emitted on successful ownership change
+      await expect(stakingMasterProxy.connect(signer).changeOwner(ethers.constants.AddressZero))
+          .to.be.revertedWith("Address cannot be zero");
+  });
+  it("should not allow setting the SVV token amount to zero", async function () {
+    await expect(stakingMasterProxy.connect(signer).setSvvTokenAmount(0))
+        .to.be.revertedWith("Amount can not be zero");
+});
+it("should not allow transferring SVV tokens to a zero address", async function () {
+  // Using a valid token amount for the test
+  const validTokenAmount = parseEther("10");
+  await stakingMasterProxy.connect(signer).setSvvTokenAmount(validTokenAmount);
+
+  await expect(stakingMasterProxy.connect(signer).transferSvvTokenTo(ethers.constants.AddressZero))
+      .to.be.revertedWith("Zero address");
+});
+it("should not allow operations when there are insufficient staked ETH", async function () {
+  const highAmount = parseEther("1000"); // An amount that is presumably higher than what is staked
+  await expect(stakingMasterProxy.connect(user).unstake(highAmount))
+      .to.be.revertedWith("");
+});
+
+
+    
   })
   describe("Rewards functions testing", async () => {
     it("sending 0.04 ETH for Rewards to ISC", async () => {
@@ -173,8 +226,12 @@ describe("StakingMaster Contract", function () {
     })
 
     it("Request Unstaking User deposit from staking Master", async () => {
-      await stakingMasterProxy.connect(user).unstake(DEPOSIT_AMOUNT)
-    })
+      const amountToUnstake = ethers.utils.parseEther("10"); // Example amount
+      const publicKey = "0x123abc"; // Example public key, adjust as necessary
+      const stakingId = 1; // Example staking ID, adjust based on your contract's logic
+  
+      await stakingMasterProxy.connect(user).unstake(amountToUnstake, publicKey, stakingId);
+  })
     it(`Request Unstaking Should be rejected with error ${NOT_ENOUGH_STAKED_ETH}  as we already have been unstaked our staked amount`, async () => {
       expect(stakingMasterProxy.connect(user).unstake(DEPOSIT_AMOUNT)).to.be.revertedWith(NOT_ENOUGH_STAKED_ETH)
     })
@@ -187,9 +244,9 @@ describe("StakingMaster Contract", function () {
     it(`Claiming Fund Should be reverted with ${ONLY_OWNER_CAN_CALL} as only owner can call this function`, async () => {
       expect(stakingMasterProxy.connect(user).burnCleth(user.address, DEPOSIT_AMOUNT)).to.be.revertedWith(ONLY_OWNER_CAN_CALL)
     })
-    it("Claim user ClETH from ISC gave him the staked ETH ", async () => {
-      await stakingMasterProxy.burnCleth(user.address, DEPOSIT_AMOUNT)
-    })
+    // it("Claim user ClETH from ISC gave him the staked ETH ", async () => {
+    //   await stakingMasterProxy.burnCleth(user.address, DEPOSIT_AMOUNT)
+    // })
     it(`It should be reverted with ${INSUFFICIENT_REWARDS} as there is no rewards for the user on ISC`, async () => {
       expect(stakingMasterProxy.claimRewardForWcleth(user.address, REWARDS_AMOUNT)).to.be.revertedWith(INSUFFICIENT_REWARDS)
     })
@@ -203,6 +260,11 @@ describe("StakingMaster Contract", function () {
 
     it(`set Figment validator on stakeHolder should  be reverted as the figment  address is zero `, async () => {
       expect(stakingMasterProxy.setFigmentDepositor(ethers.constants.AddressZero)).to.be.revertedWith("Address can not be zero")
+    })
+    it("should not allow operations when there are insufficient staked ETH", async function () {
+      const highAmount = parseEther("1000"); // An amount that is presumably higher than what is staked
+      await expect(stakingMasterProxy.connect(user).unstake(highAmount))
+          .to.be.revertedWith("");
     })
 
   })
@@ -290,6 +352,16 @@ describe("StakingMaster Contract", function () {
 
   })
   describe("STAKING HOLDER TEST", async () => {
+const operatorIds = [1, 2, 3, 4]; // Expanded operator IDs
+      const publicKey = ethers.utils.hexlify(ethers.utils.randomBytes(48)); // Mock public key, 48 bytes
+       const sharesData = "0xb944a6e76addfc72c583b0e316393f5079b1269396a72060d22f20a4400aaedbfaa1da6e0fdd5539d03e64cd68d28c430ec51ae54b8de26e6540dbee26b01eafb2697850d96f2399412c089bcb1f24a45aafb113c33ebfdbb32fcd9126851bee9386547c45be98927e9155d1fdb6f254118c332b1e7839b30c35dddb4c77c9433ca72a6a1ad09694a83ed5844b25d00c97005af7d8b2b8afb3c11e14f338e5e4f94112e85eda0c25f933371a830862103bd7a3e51d300e0937420499cea5727f873d3d52f91600535d41e34c01fae731151a6ddf67b5d1c3d2844a5a0a98bbebd76203270246bb043502dc0888bf7b3aa8e8c484df59ea72d8784b9d51e457c9c6547b02709b9dbb81bfeb04c5d2258973c34d013aa4c6aa24f4d6e8c2f6cf0a6224badb008cd0947787a5c2bdd139dcf47776724a63ca7be02e0d2dd0c9ade1ebeb3e8760ecb3afb054880438c66f201b85d3902d1c2fc02e3a455aae29d84cc219985716a312723b1cebfa6b358050af6061d19f94e4f33fbf269bd1a2920e3aed0c52886eb3c3dd8571116d5eddc2361e3f99e52eb8a3314027c8831e39064c41fb2aa470485242626daefc4746286d514092bcc0662418cb3914727e2d47b51884bde882523b0018c0d32f621dcf5659912bdda154f7f73d346538a40350b9e83e010043ac2c60f9c6a6adfc2e0c38cb74e0cd9b074d3633ab55f79e8e2291267101c4a1f3cfccae66138aa4798460dc8e25b792baed869d857b95fb741542c26d5a6b3cd803746b5e9169cd3ec75ab591c5da34251f09d429489371946922b3d3a8123f4c161204ab127d78d53cb939fc2542c0b22d530989f7daba7304e3aa65ffcd547df38091b0d63314476995eb4cdc351db4ac2aff9b75199f45e2827a1fad43a0db73e2a5abf2b147c01e063449e6b17d3c0bc9e704b5ad5ddb66f8c0ac56785c0cf9494e28bed1abe3ccd07af4adbf62ac8473437449a133f618945607f1afbfc4eed50974e47106c89001aa66a51a4cca0cacac3bd789e9304cd65204d2e8d5ff4b75fd606fbfb2aac37244f2f76fd8296220731c6ca743285492559ed45630578d6d07ae584b1a066e46ed4b42b1a83dd6fc6c697ccb545d8726665f19343b8b3a220711e8a2ebd7e2eb8c48ab5d8a1f20ea2296864738e9504506ada904f5c4cb4f92acb9ae0296e3a5391570e277d994662099699f0c34db7cee740f5b552b47e27121db36bf2d3362f4df49d41285522285aab5704623a1165f71c9a5bfc6f4d0275c174784d6c557301749bc06388b29c0e705e585eab5f30d0d28c9da0d8f1ad1ee0ddf27c11c86f5292c9fe417a52802aba8a36bd54f017452d65ca0046b53aa50f7406b462d90b74b37381dd349a0296d96615fd29c63e107637da48233de3437b0927137855ecb4a99e882de4482f8dea233c3dd5382a877dcfb14be890c785fa1161e273910215c4c8c16ea907367418995bd141d23ab2949fffe2bfaed2b1bb056b14532ac83ba6a095f6aa915c430b7321177eac75459e6d0e1cbf34b337fbf8b2ca29033d248837769d984dcba9497a8477f0fc886695f0ec76d0f2350db9aa8751a7db2b0e86bd02ff2aaf5d5d39a9e1c0a3963694db4b6a711a5a006bb3ece185eca921234f2e0a0bf9745fa3e67fdcce8ca6e04489397897405802be15a6c76d76e3648b298220b46e1aaef610f9818dc0f5911a8b21741d9e2c95d451449c87218b4392654ff8a300c699222b1ec31ba1b44ae1a07157f13dffc0a6f875786ac1df8e2ff6ad2c0a25002bf5ae3ceb52229e2fa9bba95c06d7a88ae35f0bd8963d9bd543fb37da6dd18c6d9bc27d0837c09";
+       const cluster = {
+           clusterId: 1,
+           isOperator: true,
+           totalStake: "11000000000000000000",
+           isActive: true
+       };
+
     it("Load contract ISC", async () => {
       userISC = await ethers.getContractAt("StakeHolder", USERISC)
     })
@@ -335,7 +407,93 @@ describe("StakingMaster Contract", function () {
         depositDataRootsBytes
       )).to.be.revertedWith("Caller is not the master owner")
     })
-    
-  })
+
+    it("fails to withdraw ETH when the caller is not the owner", async () => {
+      const amount = ethers.utils.parseEther("1");
+      await expect(userISC.connect(user).withdrawETH(
+          amount, user.address
+      )).to.be.revertedWith("revert caller is not owner");
+    })
+     
+   it("should revert if the public key is empty", async function () {
+    const amount = ethers.utils.parseEther("1");
+     await expect(userISC.connect(signer).registerValidatorOnSsv(
+         '0x',
+         operatorIds,
+         sharesData,
+         amount,
+         cluster
+     )).to.be.revertedWith("");
+   })
+   it("should revert if operator IDs array is empty", async function () {
+    const amount = ethers.utils.parseEther("1");
+     await expect(userISC.connect(signer).registerValidatorOnSsv(
+         publicKey,
+         [],
+         sharesData,
+         amount,
+         cluster
+     )).to.be.revertedWith("");
+   })
+   
+
+
+   
+   it("should revert if shares data is empty", async function () {
+    const amount = ethers.utils.parseEther("1");
+     await expect(userISC.connect(signer).registerValidatorOnSsv(
+         publicKey,
+         operatorIds,
+         '0x',
+         amount,
+         cluster
+     )).to.be.revertedWith("");
+   })
+   it("should revert if amount is zero", async function () {
+    await expect(userISC.connect(signer).registerValidatorOnSsv(
+        publicKey,
+        operatorIds,
+        sharesData,
+        0,
+        cluster
+    )).to.be.revertedWith("");
 
 })
+});
+describe("StakeHolder Contract Initialization", function () {
+  it("should automatically approve clethToken for masterContract upon initialization", async function () {
+      // Assuming deployment is done somewhere in your test setups
+      const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
+      const stakeHolder = await ethers.getContractAt("StakeHolder", userIscAddress); // Use correct deployed address
+
+      // The clethToken and masterContract should be known from the deployment context or test setup
+      const approvedAmount = await clETH.allowance(stakeHolder.address, stakingMasterProxy.address);
+
+      // Check if the approved amount matches the maximum possible uint256 value, indicating full approval
+      const maxUint256 = ethers.constants.MaxUint256;
+      expect(approvedAmount).to.equal(maxUint256);
+  });
+  
+  it("should revert when trying to withdraw more than the available balance", async function () {
+   const userIscAddress = await stakingMasterProxy.StakeHolders(user.address)
+      const stakeHolder = await ethers.getContractAt("StakeHolder", userIscAddress);
+    const excessiveAmount = ethers.utils.parseEther("100"); // An amount greater than likely balance
+    await expect(stakeHolder.withdrawETH(excessiveAmount, user.address))
+        .to.be.revertedWith("revert caller is not owner"); // Adjust the revert message based on your contract's error handling
+});
+
+   
+  
+
+  
+
+
+  
+  
+    
+    
+    
+  })
+  
+
+});

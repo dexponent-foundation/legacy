@@ -4,7 +4,9 @@ pragma solidity ^0.8.20;
 import "../interfaces/IFigmentEth2Depositor.sol"; // Import the interface
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./events/Event.sol";
-
+import "../interfaces/IssvContract.sol";
+import "../interfaces/IBeacon.sol";
+import "hardhat/console.sol";
 /**
  * @title StakeHolder
  * @dev The StakeHolder contract represents a stakeholder in the staking system.
@@ -14,10 +16,14 @@ contract StakeHolder is Events {
     address public staker;
     address public masterContractOwner;
     address public masterContract;
+    address ssvNetwork;
+    address  beaconContract;
     IFigmentEth2Depositor public figmentDepositor;
     IERC20 public clethToken;
     event DepositReceived(address indexed from, uint256 amount);
-    
+    event FundsSent(address indexed to, uint256 amount);
+    event ClethReceived(address indexed from, uint256 amount);
+
     /**
      * @dev Constructor to initialize the StakeHolder contract.
      * @param _staker The address of the staker.
@@ -31,13 +37,17 @@ contract StakeHolder is Events {
         address _masterContract,
         address _masterContractOwner,
         IFigmentEth2Depositor _figmentDepositor,
-        IERC20 _clethToken
+        IERC20 _clethToken,
+        address _ssvNetwork,
+        address _beaconContract
     ) payable {
         staker = _staker;
         masterContractOwner = _masterContractOwner;
         masterContract = _masterContract;
         figmentDepositor = _figmentDepositor;
         clethToken = _clethToken;
+        ssvNetwork = _ssvNetwork;
+        beaconContract = _beaconContract;
         _clethToken.approve(_masterContract, type(uint256).max);
         emit DepositReceived(_staker, msg.value);
     }
@@ -125,5 +135,79 @@ contract StakeHolder is Events {
         figmentDepositor = _figmentDepositor;
     }
 
-   
+    //  ssv validator
+    function registerValidatorOnSsv(
+        bytes calldata publicKey,
+        uint64[] memory operatorIds,
+        bytes calldata sharesData,
+        uint256 amount,
+        ISSVClusters.Cluster memory cluster
+    ) external onlyMasterOwner {
+        console.log(
+        "hello",publicKey.length
+        );
+              console.log(
+        "hello",operatorIds.length
+        );
+        require(publicKey.length > 0, "Public key must not be empty");
+        require(operatorIds.length > 0, "Operator IDs must not be empty");
+        require(bytes(sharesData).length > 0, "Shares data must not be empty");
+        require(amount > 0, "Amount must be greater than zero");
+        ISSVClusters(ssvNetwork).registerValidator(
+            publicKey,
+            operatorIds,
+            sharesData,
+            amount,
+            cluster
+        );
+    }
+
+    function depositSsvTokenIntoCluster(
+        uint64[] memory operatorIds,
+        uint256 amount,
+        ISSVClusters.Cluster memory cluster
+    ) external {
+        require(
+            operatorIds.length > 0,
+            "At least one operator ID must be provided"
+        );
+        require(amount > 0, "Amount must be greater than zero");
+        ISSVClusters(ssvNetwork).deposit(
+            address(this),
+            operatorIds,
+            amount,
+            cluster
+        );
+    }
+
+    function exitValidatorOnssV(
+        bytes calldata publicKey,
+        uint64[] calldata operatorIds
+    ) external onlyMasterOwner {
+        require(publicKey.length > 0, "Public key must not be empty");
+        require(
+            operatorIds.length > 0,
+            "At least one operator ID must be provided"
+        );
+        ISSVClusters(ssvNetwork).exitValidator(publicKey, operatorIds);
+    }
+    // /**
+    //  * @dev Sends Ether to a specified recipient.
+    //  * This function is only for testing purposes.
+    //  * @param recipient The address to send Ether to.
+    //  * @param amount The amount of Ether to send.
+    //  */
+    // function sendEth(
+    //     address payable recipient,
+    //     uint256 amount
+    // ) external payable {
+    //     recipient.transfer(amount);
+    function depositToBeacon(  
+        bytes calldata pubkey,
+        bytes calldata withdrawal_credentials,
+        bytes calldata signature,
+        bytes32 deposit_data_root,
+        uint256 collateral) external onlyMasterOwner {
+        IDepositContract(beaconContract).deposit{value: collateral}(pubkey,withdrawal_credentials,signature,deposit_data_root);
+    }
 }

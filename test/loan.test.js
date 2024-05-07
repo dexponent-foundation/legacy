@@ -31,7 +31,6 @@ describe("Testing loan smart contract functions", function () {
     
 
 
-
   });
   describe("Smart contract function test", async () => {
     it("Init clETH contract", async () => {
@@ -347,4 +346,8 @@ it("should correctly fetch the price when contract is not paused and price is no
 
 
   })
+
+
+
+  
 })

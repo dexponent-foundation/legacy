@@ -19,12 +19,15 @@ abstract contract StakingMasterStorage {
     uint256 constant MIN_DEPOSIT_AMOUNT = 32 ether; // Minimum deposit amount required
     IFigmentEth2Depositor public figmentDepositor; // The Figment Eth2 Depositor contract
     address public owner; // The owner address of the contract
+    address ssvNetwork;
+    address beaconContract;
+    address ssvToken;
     uint256 public totalPoolStake; // Total pool stake accumulated
+    uint256 ssvTokenAmount;
     mapping(address => StakeHolder) public StakeHolders; // Mapping of staker addresses to their respective StakeHolder contracts
     mapping(address => uint256) public StakedBalance; // Mapping of staker addresses to their staked balances
     mapping(address => uint256) public WithdrawalBalance; // Mapping of staker addresses to their withdrawal balances
     mapping(address => uint256) public totalRewardsClaimed; // Mapping of staker addresses to their total rewards claimed
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
