@@ -31,7 +31,10 @@ async function sendETH(address, signer, amount) {
   };
   await signer.sendTransaction(tx);
 }
-
+const StakingId = {
+  FIGMENT: 1,
+  SSV: 2
+};
 
 
 describe("StakingMaster Contract", function () {
@@ -50,9 +53,9 @@ describe("StakingMaster Contract", function () {
     wclETH = await deployProxy("wclETH", signer, "TokenProxy");
     stakingMasterProxy = await deployProxy("StakingMaster", signer, "DexProxy");
   
-    SSV = { address: "0x1234567890123456789012345678901234567890" };
+    SSV = { address: "0x38A4794cCEd47d3baf7370CcC43B560D3a1beEFA" };
   
-    const beaconAddress = "0x1234567890123456789012345678901234567890"; // Replace with actual contract address
+    const beaconAddress = "0x4242424242424242424242424242424242424242"; 
 
     // Getting an instance of the beacon using its interface and address
     Beacon = await ethers.getContractAt("IBeacon", beaconAddress, signer);
@@ -83,10 +86,6 @@ describe("StakingMaster Contract", function () {
       expect(stakingMasterProxy.setUp(signer.address, ethers.constants.AddressZero)).to.be.revertedWith("Address cannot be zero")
     })
     it("Init to staking Master contract", async () => {
-      console.log("clETH.address:", clETH.address);
-console.log("signer.address:", signer.address);
-console.log("SSV.address:", SSV.address);
-console.log("Beacon.address:", Beacon.address);
       await stakingMasterProxy.setUp(clETH.address, signer.address,SSV.address,          // Address of the SSV contract
       Beacon.address,       
       Beacon.address)
