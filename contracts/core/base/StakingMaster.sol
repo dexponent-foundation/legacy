@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./modifier/modifier.sol";
+import "./StakeHolderFactory.sol";
 /**
  * @title StakingMaster
  * @dev StakingMaster contract facilitates the staking and unstaking of ETH for clETH tokens, as well as claiming rewards.
@@ -23,7 +24,7 @@ contract StakingMaster is
     Modifiers
 {
     using Math for uint256;
-
+    StakeHolderFactory public stakeHolderFactory;
     /**
      * @dev Initializes the contract with the given ClETH token address and FigmentEth2Depositor address.
      * @param _clethToken The address of the ClEth token contract.
@@ -34,7 +35,8 @@ contract StakingMaster is
         address _figmentDepositor,
         address _ssvToken,
         address _ssvNetowrk,
-        address _beaconContract
+        address _beaconContract,
+        address _stakeHolderFactory
     )
         public
         virtual
@@ -48,6 +50,7 @@ contract StakingMaster is
         ssvNetwork = _ssvNetowrk;
         beaconContract = _beaconContract;
         figmentDepositor = IFigmentEth2Depositor(_figmentDepositor);
+        stakeHolderFactory = StakeHolderFactory(_stakeHolderFactory);
         __ReentrancyGuard_init();
     }
 
@@ -103,7 +106,7 @@ contract StakingMaster is
         require(msg.value >= MIN_DEPOSIT_AMOUNT, "Must sent minimum 32 ETH");
         StakeHolder stakeHolder = StakeHolders[msg.sender];
         if (address(stakeHolder) == address(0)) {
-            stakeHolder = new StakeHolder{value: msg.value}(
+            stakeHolder = stakeHolderFactory.createStakeHolder{value: msg.value}(
                 msg.sender,
                 address(this),
                 owner,
@@ -113,7 +116,6 @@ contract StakingMaster is
                 beaconContract,
                 ssvToken
             );
-
             StakeHolders[msg.sender] = stakeHolder;
         } else {
             (bool success, ) = address(stakeHolder).call{value: msg.value}("");

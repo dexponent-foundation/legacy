@@ -6,6 +6,7 @@ require("hardhat-storage-layout");
 require("hardhat-storage-layout-changes");
 require('solidity-coverage')
 require("hardhat-gas-reporter");
+require('hardhat-contract-sizer');
 module.exports = {
   solidity: {
     compilers: [
@@ -13,8 +14,8 @@ module.exports = {
         version: "0.8.20",
         settings: {
           optimizer: {
-            runs: 200,
-            enabled: true,
+            //runs: 200,
+            enabled: false,
           },
           "outputSelection": {
             "*": {

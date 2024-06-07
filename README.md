@@ -98,3 +98,4 @@ To get started with the project, follow these steps:
 2. Compile smart contracts with `yarn build`.
 3. Run tests using `yarn test`.
 4. Check test coverage with `yarn coverage`.
+5. Check contract sizes using `yarn hardhat size-contracts`.
